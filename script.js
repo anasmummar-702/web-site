@@ -1,30 +1,30 @@
 document.addEventListener('DOMContentLoaded', () => {
     
-    // Product Data
+    // Product Data with Real Images
     const products = {
         ladies: [
-            { id: 1, name: "Sapphire Anarkali", price: "₹4,599", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Blue+Anarkali", tag: "Ladies Couture" },
-            { id: 2, name: "Silk Chiffon Saree", price: "₹2,899", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Silk+Saree", tag: "Ladies Couture" },
-            { id: 3, name: "Embroidered Kurti", price: "₹1,299", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Kurti+Set", tag: "Ladies Couture" },
-            { id: 4, name: "Royal Velvet Gown", price: "₹5,999", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Velvet+Gown", tag: "Ladies Couture" }
+            { id: 1, name: "Sapphire Anarkali", price: "₹4,599", img: "https://images.unsplash.com/photo-1598555985226-e137685ba056?q=80&w=400&auto=format&fit=crop", tag: "Ladies Couture" },
+            { id: 2, name: "Silk Chiffon Saree", price: "₹2,899", img: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?q=80&w=400&auto=format&fit=crop", tag: "Ladies Couture" },
+            { id: 3, name: "Embroidered Kurti", price: "₹1,299", img: "https://images.unsplash.com/photo-1621786012659-1e2474dc2545?q=80&w=400&auto=format&fit=crop", tag: "Ladies Couture" },
+            { id: 4, name: "Royal Velvet Gown", price: "₹5,999", img: "https://images.unsplash.com/photo-1566174053879-31528523f8ae?q=80&w=400&auto=format&fit=crop", tag: "Ladies Couture" }
         ],
         kids: [
-            { id: 5, name: "Little Prince Sherwani", price: "₹1,999", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Kids+Sherwani", tag: "Little Royals" },
-            { id: 6, name: "Princess Tulle Frock", price: "₹1,499", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Blue+Frock", tag: "Little Royals" },
-            { id: 7, name: "Festive Dhoti Set", price: "₹1,199", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Dhoti+Kurta", tag: "Little Royals" },
-            { id: 8, name: "Velvet Party Coat", price: "₹2,100", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Kids+Blazer", tag: "Little Royals" }
+            { id: 5, name: "Little Prince Sherwani", price: "₹1,999", img: "https://images.unsplash.com/photo-1609176378415-46c96822c91a?q=80&w=400&auto=format&fit=crop", tag: "Little Royals" },
+            { id: 6, name: "Princess Tulle Frock", price: "₹1,499", img: "https://images.unsplash.com/photo-1518831501631-4299b8678082?q=80&w=400&auto=format&fit=crop", tag: "Little Royals" },
+            { id: 7, name: "Festive Dhoti Set", price: "₹1,199", img: "https://images.unsplash.com/photo-1503919545889-aef6d7a12cc6?q=80&w=400&auto=format&fit=crop", tag: "Little Royals" },
+            { id: 8, name: "Velvet Party Coat", price: "₹2,100", img: "https://images.unsplash.com/photo-1519238263496-6362d74c1123?q=80&w=400&auto=format&fit=crop", tag: "Little Royals" }
         ],
         shoes: [
-            { id: 13, name: "Royal Embroidered Mojaris", price: "₹1,599", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Mojaris", tag: "Footwear" },
-            { id: 14, name: "Golden Stiletto Heels", price: "₹2,499", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Heels", tag: "Footwear" },
-            { id: 15, name: "Velvet Slip-ons", price: "₹999", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Velvet+Shoes", tag: "Footwear" },
-            { id: 16, name: "Kids Party Sandals", price: "₹850", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Kids+Sandals", tag: "Little Royals" }
+            { id: 13, name: "Royal Embroidered Mojaris", price: "₹1,599", img: "https://images.unsplash.com/photo-1560343090-f0409e92791a?q=80&w=400&auto=format&fit=crop", tag: "Footwear" },
+            { id: 14, name: "Golden Stiletto Heels", price: "₹2,499", img: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?q=80&w=400&auto=format&fit=crop", tag: "Footwear" },
+            { id: 15, name: "Velvet Slip-ons", price: "₹999", img: "https://images.unsplash.com/photo-1587563871167-1ee9c731aef4?q=80&w=400&auto=format&fit=crop", tag: "Footwear" },
+            { id: 16, name: "Kids Party Sandals", price: "₹850", img: "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?q=80&w=400&auto=format&fit=crop", tag: "Little Royals" }
         ],
         cosmetics: [
-            { id: 9, name: "Diamond Jewellery Set", price: "₹899", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Necklace+Set", tag: "Ornaments" },
-            { id: 10, name: "Matte Lipstick Trio", price: "₹599", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Lipsticks", tag: "Cosmetics" },
-            { id: 11, name: "Silver Plated Bangles", price: "₹450", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Bangles", tag: "Ornaments" },
-            { id: 12, name: "Organic Kajal", price: "₹299", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Kajal", tag: "Cosmetics" }
+            { id: 9, name: "Diamond Jewellery Set", price: "₹899", img: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?q=80&w=400&auto=format&fit=crop", tag: "Ornaments" },
+            { id: 10, name: "Matte Lipstick Trio", price: "₹599", img: "https://images.unsplash.com/photo-1586495777744-4413f21062fa?q=80&w=400&auto=format&fit=crop", tag: "Cosmetics" },
+            { id: 11, name: "Silver Plated Bangles", price: "₹450", img: "https://images.unsplash.com/photo-1573408301185-9146fe634ad0?q=80&w=400&auto=format&fit=crop", tag: "Ornaments" },
+            { id: 12, name: "Organic Kajal", price: "₹299", img: "https://images.unsplash.com/photo-1596462502278-27bfdd403348?q=80&w=400&auto=format&fit=crop", tag: "Cosmetics" }
         ]
     };
 
