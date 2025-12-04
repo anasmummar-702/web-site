@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     
+    // Product Data
     const products = {
         ladies: [
             { id: 1, name: "Sapphire Anarkali", price: "₹4,599", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Blue+Anarkali", tag: "Ladies Couture" },
@@ -13,7 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
             { id: 7, name: "Festive Dhoti Set", price: "₹1,199", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Dhoti+Kurta", tag: "Little Royals" },
             { id: 8, name: "Velvet Party Coat", price: "₹2,100", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Kids+Blazer", tag: "Little Royals" }
         ],
-        // Added Shoes Category
         shoes: [
             { id: 13, name: "Royal Embroidered Mojaris", price: "₹1,599", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Mojaris", tag: "Footwear" },
             { id: 14, name: "Golden Stiletto Heels", price: "₹2,499", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Heels", tag: "Footwear" },
@@ -28,48 +28,53 @@ document.addEventListener('DOMContentLoaded', () => {
         ]
     };
 
+    // Home Page Tabs Logic
     const productContainer = document.getElementById('product-container');
     const tabButtons = document.querySelectorAll('.tab-btn');
 
-    function renderProducts(category) {
-        productContainer.innerHTML = '';
-        
-        const items = products[category];
-        
-        if (items) {
-            items.forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'product-card';
-                card.innerHTML = `
-                    <div class="product-image">
-                        <img src="${item.img}" alt="${item.name}">
-                        <div class="hover-actions">
-                            <button class="action-btn" title="Add to Cart"><i class="fas fa-shopping-bag"></i></button>
-                            <button class="action-btn" title="Wishlist"><i class="far fa-heart"></i></button>
+    if (productContainer && tabButtons.length > 0) {
+        function renderProducts(category) {
+            productContainer.innerHTML = '';
+            
+            const items = products[category];
+            if(items) {
+                items.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'product-card';
+                    card.innerHTML = `
+                        <div class="product-image">
+                            <img src="${item.img}" alt="${item.name}">
+                            <div class="hover-actions">
+                                <button class="action-btn" title="Add to Cart"><i class="fas fa-shopping-bag"></i></button>
+                                <button class="action-btn" title="Wishlist"><i class="far fa-heart"></i></button>
+                            </div>
                         </div>
-                    </div>
-                    <div class="product-info">
-                        <div class="category-tag">${item.tag}</div>
-                        <h4 class="product-title">${item.name}</h4>
-                        <div class="product-price">${item.price}</div>
-                    </div>
-                `;
-                productContainer.appendChild(card);
-            });
+                        <div class="product-info">
+                            <div class="category-tag">${item.tag}</div>
+                            <h4 class="product-title">${item.name}</h4>
+                            <div class="product-price">${item.price}</div>
+                        </div>
+                    `;
+                    productContainer.appendChild(card);
+                });
+            }
         }
+
+        // Initial Load
+        renderProducts('ladies');
+
+        // Tab Clicking
+        tabButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const target = btn.getAttribute('data-target');
+                renderProducts(target);
+            });
+        });
     }
 
-    renderProducts('ladies');
-
-    tabButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            tabButtons.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            const target = btn.getAttribute('data-target');
-            renderProducts(target);
-        });
-    });
-
+    // Mobile Menu Logic (Common for all pages)
     const mobileToggle = document.querySelector('.mobile-menu-toggle');
     const nav = document.querySelector('.main-navigation');
 
@@ -83,6 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Cosmetic Carousel (Home Page Only)
     const cosmeticTrack = document.getElementById('cosmetic-track');
     if(cosmeticTrack) {
         cosmeticTrack.innerHTML = '<p style="text-align:center; padding:20px; width:100%; color:#666;">New Cosmetic Arrivals Carousel Loading...</p>';
