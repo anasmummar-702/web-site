@@ -13,6 +13,13 @@ document.addEventListener('DOMContentLoaded', () => {
             { id: 7, name: "Festive Dhoti Set", price: "₹1,199", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Dhoti+Kurta", tag: "Little Royals" },
             { id: 8, name: "Velvet Party Coat", price: "₹2,100", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Kids+Blazer", tag: "Little Royals" }
         ],
+        // Added Shoes Category
+        shoes: [
+            { id: 13, name: "Royal Embroidered Mojaris", price: "₹1,599", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Mojaris", tag: "Footwear" },
+            { id: 14, name: "Golden Stiletto Heels", price: "₹2,499", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Heels", tag: "Footwear" },
+            { id: 15, name: "Velvet Slip-ons", price: "₹999", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Velvet+Shoes", tag: "Footwear" },
+            { id: 16, name: "Kids Party Sandals", price: "₹850", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Kids+Sandals", tag: "Little Royals" }
+        ],
         cosmetics: [
             { id: 9, name: "Diamond Jewellery Set", price: "₹899", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Necklace+Set", tag: "Ornaments" },
             { id: 10, name: "Matte Lipstick Trio", price: "₹599", img: "https://placehold.co/400x550/f0f8ff/5DADE2?text=Lipsticks", tag: "Cosmetics" },
@@ -29,25 +36,27 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const items = products[category];
         
-        items.forEach(item => {
-            const card = document.createElement('div');
-            card.className = 'product-card';
-            card.innerHTML = `
-                <div class="product-image">
-                    <img src="${item.img}" alt="${item.name}">
-                    <div class="hover-actions">
-                        <button class="action-btn" title="Add to Cart"><i class="fas fa-shopping-bag"></i></button>
-                        <button class="action-btn" title="Wishlist"><i class="far fa-heart"></i></button>
+        if (items) {
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                card.innerHTML = `
+                    <div class="product-image">
+                        <img src="${item.img}" alt="${item.name}">
+                        <div class="hover-actions">
+                            <button class="action-btn" title="Add to Cart"><i class="fas fa-shopping-bag"></i></button>
+                            <button class="action-btn" title="Wishlist"><i class="far fa-heart"></i></button>
+                        </div>
                     </div>
-                </div>
-                <div class="product-info">
-                    <div class="category-tag">${item.tag}</div>
-                    <h4 class="product-title">${item.name}</h4>
-                    <div class="product-price">${item.price}</div>
-                </div>
-            `;
-            productContainer.appendChild(card);
-        });
+                    <div class="product-info">
+                        <div class="category-tag">${item.tag}</div>
+                        <h4 class="product-title">${item.name}</h4>
+                        <div class="product-price">${item.price}</div>
+                    </div>
+                `;
+                productContainer.appendChild(card);
+            });
+        }
     }
 
     renderProducts('ladies');
