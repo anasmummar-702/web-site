@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Royal Collections | Boutique Fashion</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="announcement-bar">
+        <p>Free Shipping on Orders Over ₹2500 | Exclusive Sapphire Membership Available</p>
+    </div>
+
+    <header class="site-header">
+        <div class="header-main container">
+            <div class="mobile-menu-toggle">
+                <i class="fas fa-bars"></i>
+            </div>
+            
+            <div class="brand-logo">
+                <a href="#">
+                    <h1>Royal Collections</h1>
+                    <span class="tagline">Elegance in Every Thread</span>
+                </a>
+            </div>
+
+            <div class="header-icons">
+                <div class="search-wrapper">
+                    <i class="fas fa-search"></i>
+                </div>
+                <a href="#" class="wishlist-icon"><i class="far fa-heart"></i></a>
+                <a href="#" class="cart-icon">
+                    <i class="fas fa-shopping-bag"></i>
+                    <span class="cart-count">0</span>
+                </a>
+            </div>
+        </div>
+
+        <nav class="main-navigation">
+            <ul class="nav-list">
+                <li><a href="#" class="active">Home</a></li>
+                <li><a href="#">Ladies Couture</a></li>
+                <li><a href="#">Little Royals</a></li>
+                <li><a href="#">Cosmetic Ornaments</a></li>
+                <li><a href="#">Accessories</a></li>
+                <li><a href="#" class="sale-link">Sale</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="hero-slider">
+        <div class="hero-slide active">
+            <img src="https://placehold.co/1920x800/f0f8ff/333?text=Serene+Fashion+Shoot" alt="Hero Image">
+            <div class="hero-content">
+                <span class="subtitle">The Azure Season</span>
+                <h2>Timeless Beauty <br>Modern Grace</h2>
+                <p>Discover our handcrafted collection for ladies and kids.</p>
+                <a href="#collections" class="btn btn-primary">Explore Collection</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="features-bar container">
+        <div class="feature-item">
+            <i class="fas fa-crown"></i>
+            <div>
+                <h4>Premium Quality</h4>
+                <p>Handpicked fabrics</p>
+            </div>
+        </div>
+        <div class="feature-item">
+            <i class="fas fa-shipping-fast"></i>
+            <div>
+                <h4>Fast Delivery</h4>
+                <p>Across the nation</p>
+            </div>
+        </div>
+        <div class="feature-item">
+            <i class="fas fa-undo-alt"></i>
+            <div>
+                <h4>Easy Returns</h4>
+                <p>7-day policy</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="curated-collections container" id="collections">
+        <div class="section-header text-center">
+            <h3>Curated Collections</h3>
+            <div class="separator-blue"></div>
+        </div>
+        <div class="collection-grid">
+            <div class="collection-card large">
+                <img src="https://placehold.co/600x800/f5f9fc/5DADE2?text=Ladies+Wear" alt="Ladies Wear">
+                <div class="overlay">
+                    <h3>Ladies Wear</h3>
+                    <a href="#" class="btn btn-outline">Shop Now</a>
+                </div>
+            </div>
+            <div class="collection-card small-top">
+                <img src="https://placehold.co/600x400/f5f9fc/5DADE2?text=Kids+Zone" alt="Kids Wear">
+                <div class="overlay">
+                    <h3>Kids Zone</h3>
+                    <a href="#" class="btn btn-outline">Shop Now</a>
+                </div>
+            </div>
+            <div class="collection-card small-bottom">
+                <img src="https://placehold.co/600x400/f5f9fc/5DADE2?text=Ornaments" alt="Cosmetic Ornaments">
+                <div class="overlay">
+                    <h3>Ornaments</h3>
+                    <a href="#" class="btn btn-outline">Shop Now</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="tabbed-products container">
+        <div class="section-header text-center">
+            <h3>Trending Now</h3>
+            <div class="tab-controls">
+                <button class="tab-btn active" data-target="ladies">Ladies</button>
+                <button class="tab-btn" data-target="kids">Kids</button>
+                <button class="tab-btn" data-target="cosmetics">Cosmetics</button>
+            </div>
+        </div>
+        
+        <div class="product-grid" id="product-container">
+        </div>
+        
+        <div class="view-all-wrapper">
+            <a href="#" class="btn btn-primary">View All Products</a>
+        </div>
+    </section>
+
+    <section class="promo-banner">
+        <div class="container promo-content">
+            <div class="promo-text">
+                <span>Limited Time Offer</span>
+                <h2>The Royal Blue Festival</h2>
+                <p>Get a complimentary cosmetic ornament kit with every purchase of kid's ethnic wear over ₹3000.</p>
+                <a href="#" class="btn btn-white">Claim Offer</a>
+            </div>
+            <div class="promo-image">
+                <img src="https://placehold.co/500x500/5DADE2/fff?text=Gift+Box" alt="Gift">
+            </div>
+        </div>
+    </section>
+
+    <section class="cosmetics-spotlight container">
+        <div class="section-header text-center">
+            <h3>Beauty & Adornments</h3>
+            <div class="separator-blue"></div>
+        </div>
+        <div class="carousel-wrapper">
+            <button class="nav-btn prev"><i class="fas fa-chevron-left"></i></button>
+            <div class="carousel-track" id="cosmetic-track">
+            </div>
+            <button class="nav-btn next"><i class="fas fa-chevron-right"></i></button>
+        </div>
+    </section>
+
+    <footer class="site-footer">
+        <div class="container footer-grid">
+            <div class="footer-col brand-col">
+                <h2>Royal Collections</h2>
+                <p>Redefining elegance for the modern woman and her little ones. Experience luxury in every detail.</p>
+                <div class="social-links">
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                    <a href="#"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#"><i class="fab fa-pinterest-p"></i></a>
+                </div>
+            </div>
+            <div class="footer-col">
+                <h4>Shop</h4>
+                <ul>
+                    <li><a href="#">New Arrivals</a></li>
+                    <li><a href="#">Ladies Ethnic</a></li>
+                    <li><a href="#">Kids Party Wear</a></li>
+                    <li><a href="#">Cosmetics</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Help</h4>
+                <ul>
+                    <li><a href="#">Track Order</a></li>
+                    <li><a href="#">Returns & Exchange</a></li>
+                    <li><a href="#">Size Guide</a></li>
+                    <li><a href="#">Contact Us</a></li>
+                </ul>
+            </div>
+            <div class="footer-col newsletter-col">
+                <h4>Join the Family</h4>
+                <p>Subscribe for exclusive member updates.</p>
+                <form class="subscribe-form">
+                    <input type="email" placeholder="Your Email">
+                    <button type="submit">Join</button>
+                </form>
+            </div>
+        </div>
+        <div class="footer-bottom text-center">
+            <p>&copy; 2025 Royal Collections. All Rights Reserved.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
