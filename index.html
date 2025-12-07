@@ -4,39 +4,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Royal Collections | Boutique Fashion</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Home Specific Overrides */
+        .hero-slider { height: 600px; position: relative; overflow: hidden; }
+        .hero-slide img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.9); }
+        .hero-content { position: absolute; top: 50%; left: 10%; transform: translateY(-50%); background: rgba(255,255,255,0.9); padding: 40px; max-width: 600px; border-left: 5px solid var(--primary-blue); }
+        .hero-content h2 { font-family: var(--font-heading); font-size: 3rem; margin-bottom: 20px; line-height: 1.2; }
+        
+        .collection-grid { display: grid; grid-template-columns: 2fr 1fr; grid-template-rows: 300px 300px; gap: 20px; padding: 40px 0; }
+        .collection-card { position: relative; overflow: hidden; }
+        .collection-card img { width: 100%; height: 100%; object-fit: cover; transition: 0.5s; }
+        .collection-card:hover img { transform: scale(1.1); }
+        .collection-card.large { grid-row: 1 / span 2; }
+        .collection-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.3); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; opacity: 0; transition: 0.3s; }
+        .collection-card:hover .collection-overlay { opacity: 1; }
+        .collection-overlay h3 { font-size: 2rem; font-family: var(--font-heading); margin-bottom: 15px; }
+
+        .newsletter-section { background: url('https://images.unsplash.com/photo-1605218427368-35b80a3734e0?q=80&w=1600&auto=format&fit=crop') center/cover fixed; padding: 100px 20px; position: relative; color: white; text-align: center; }
+        .newsletter-overlay { position: absolute; inset: 0; background: rgba(6, 81, 132, 0.85); }
+        .newsletter-content { position: relative; z-index: 1; max-width: 600px; margin: 0 auto; }
+        .subscribe-form { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
+        .subscribe-form input { padding: 12px; border: none; width: 60%; }
+        
+        @media(max-width: 768px) { .collection-grid { grid-template-columns: 1fr; grid-template-rows: auto; } .hero-content { left: 5%; right: 5%; width: auto; } }
+    </style>
 </head>
 <body>
-
-    <div class="announcement-bar">
-        <p>Free Shipping on Orders Over ₹2500 | Exclusive Sapphire Membership Available</p>
-    </div>
+    <div class="announcement-bar"><p>Free Shipping on Orders Over ₹2500 | Exclusive Sapphire Membership Available</p></div>
 
     <header class="site-header">
         <div class="header-main container">
-            <div class="mobile-menu-toggle">
-                <i class="fas fa-bars"></i>
-            </div>
-            <div class="brand-logo">
-                <a href="index.html">
-                    <h1>Royal Collections</h1>
-                    <span class="tagline">Elegance in Every Thread</span>
-                </a>
-            </div>
-            <div class="header-icons">
-                <div class="search-wrapper"><i class="fas fa-search"></i></div>
-                <a href="#" class="wishlist-icon"><i class="far fa-heart"></i></a>
-                <a href="#" class="cart-icon">
-                    <i class="fas fa-shopping-bag"></i>
-                    <span class="cart-count">0</span>
-                </a>
-            </div>
+            <div class="mobile-menu-toggle"><i class="fas fa-bars"></i></div>
+            <div class="brand-logo"><a href="index.html"><h1>Royal Collections</h1><span style="font-size:0.8rem; letter-spacing:2px; display:block;">Elegance in Every Thread</span></a></div>
+            <div class="header-icons"><a href="cart.html" class="cart-icon"><i class="fas fa-shopping-bag"></i><span class="cart-count">0</span></a></div>
         </div>
-
         <nav class="main-navigation">
             <ul class="nav-list">
                 <li><a href="index.html" class="active">Home</a></li>
@@ -45,17 +50,16 @@
                 <li><a href="shoes.html">Shoes</a></li>
                 <li><a href="cosmetics.html">Cosmetic Ornaments</a></li>
                 <li><a href="accessories.html">Accessories</a></li>
-                <li><a href="#" class="sale-link">Sale</a></li>
             </ul>
         </nav>
     </header>
 
     <section class="hero-slider">
         <div class="hero-slide active">
-            <!-- Hero Image -->
-            <img src="https://images.unsplash.com/photo-1596483548597-90c766205731?q=80&w=1920&auto=format&fit=crop" alt="Hero Image">
+            <!-- New Hero Image -->
+            <img src="https://images.unsplash.com/photo-1610030469983-98e550d6193c?q=80&w=1920&auto=format&fit=crop" alt="Hero Image">
             <div class="hero-content">
-                <span class="subtitle">The Azure Season</span>
+                <span style="color:var(--primary-blue); font-weight:700; text-transform:uppercase;">The Azure Season</span>
                 <h2>Timeless Beauty <br>Modern Grace</h2>
                 <p>Discover our handcrafted collection for ladies and kids.</p>
                 <a href="#collections" class="btn btn-primary">Explore Collection</a>
@@ -63,47 +67,29 @@
         </div>
     </section>
 
-    <section class="features-bar container">
-        <div class="feature-item">
-            <i class="fas fa-crown"></i>
-            <div><h4>Premium Quality</h4><p>Handpicked fabrics</p></div>
-        </div>
-        <div class="feature-item">
-            <i class="fas fa-shipping-fast"></i>
-            <div><h4>Fast Delivery</h4><p>Across the nation</p></div>
-        </div>
-        <div class="feature-item">
-            <i class="fas fa-undo-alt"></i>
-            <div><h4>Easy Returns</h4><p>7-day policy</p></div>
-        </div>
-    </section>
-
-    <section class="curated-collections container" id="collections">
+    <section class="container" style="padding: 60px 20px;">
         <div class="section-header text-center">
             <h3>Curated Collections</h3>
-            <div class="separator-blue"></div>
+            <div style="height: 3px; width: 60px; background: var(--primary-blue); margin: 0 auto;"></div>
         </div>
-        <div class="collection-grid">
+        <div class="collection-grid" id="collections">
             <div class="collection-card large">
-                <!-- Ladies Collection Image -->
-                <img src="https://images.unsplash.com/photo-1583391733958-c77556a29910?q=80&w=600&auto=format&fit=crop" alt="Ladies Wear">
-                <div class="overlay">
+                <img src="https://images.unsplash.com/photo-1583391733958-c77556a29910?q=80&w=600&auto=format&fit=crop" alt="Ladies">
+                <div class="collection-overlay">
                     <h3>Ladies Wear</h3>
                     <a href="ladies.html" class="btn btn-outline">Shop Now</a>
                 </div>
             </div>
-            <div class="collection-card small-top">
-                <!-- Kids Collection Image -->
-                <img src="https://images.unsplash.com/photo-1629814467554-150774a3832d?q=80&w=600&auto=format&fit=crop" alt="Kids Wear">
-                <div class="overlay">
-                    <h3>Kids Zone</h3>
+            <div class="collection-card">
+                <img src="https://images.unsplash.com/photo-1609176378415-46c96822c91a?q=80&w=600&auto=format&fit=crop" alt="Kids">
+                <div class="collection-overlay">
+                    <h3>Little Royals</h3>
                     <a href="kids.html" class="btn btn-outline">Shop Now</a>
                 </div>
             </div>
-            <div class="collection-card small-bottom">
-                <!-- Ornaments Collection Image -->
-                <img src="https://images.unsplash.com/photo-1573408301185-9146fe634ad0?q=80&w=600&auto=format&fit=crop" alt="Cosmetic Ornaments">
-                <div class="overlay">
+            <div class="collection-card">
+                <img src="https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?q=80&w=600&auto=format&fit=crop" alt="Jewellery">
+                <div class="collection-overlay">
                     <h3>Ornaments</h3>
                     <a href="cosmetics.html" class="btn btn-outline">Shop Now</a>
                 </div>
@@ -111,63 +97,20 @@
         </div>
     </section>
 
-    <section class="tabbed-products container">
-        <div class="section-header text-center">
-            <h3>Trending Now</h3>
-            <div class="tab-controls">
-                <button class="tab-btn active" data-target="ladies">Ladies</button>
-                <button class="tab-btn" data-target="kids">Kids</button>
-                <button class="tab-btn" data-target="shoes">Shoes</button>
-                <button class="tab-btn" data-target="cosmetics">Cosmetics</button>
-            </div>
+    <!-- Visual Newsletter Section -->
+    <section class="newsletter-section">
+        <div class="newsletter-overlay"></div>
+        <div class="newsletter-content">
+            <h2 style="font-family: var(--font-heading); font-size: 2.5rem; margin-bottom: 20px;">Join the Royal Family</h2>
+            <p>Subscribe to receive updates, access to exclusive deals, and more.</p>
+            <form class="subscribe-form">
+                <input type="email" placeholder="Enter your email address">
+                <button type="submit" class="btn" style="background: white; color: var(--primary-blue);">Subscribe</button>
+            </form>
         </div>
-        <div class="product-grid" id="product-container"></div>
-        <div class="view-all-wrapper"><a href="ladies.html" class="btn btn-primary">View All Products</a></div>
     </section>
 
-    <footer class="site-footer">
-        <div class="container footer-grid">
-            <div class="footer-col brand-col">
-                <h2>Royal Collections</h2>
-                <p>Redefining elegance for the modern woman and her little ones.</p>
-                <div class="social-links">
-                    <a href="#"><i class="fab fa-instagram"></i></a>
-                    <a href="#"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#"><i class="fab fa-pinterest-p"></i></a>
-                </div>
-            </div>
-            <div class="footer-col">
-                <h4>Shop</h4>
-                <ul>
-                    <li><a href="ladies.html">Ladies Ethnic</a></li>
-                    <li><a href="kids.html">Kids Party Wear</a></li>
-                    <li><a href="shoes.html">Shoes</a></li>
-                    <li><a href="cosmetics.html">Cosmetics</a></li>
-                </ul>
-            </div>
-            <div class="footer-col">
-                <h4>Help</h4>
-                <ul>
-                    <li><a href="#">Track Order</a></li>
-                    <li><a href="#">Returns & Exchange</a></li>
-                    <li><a href="#">Size Guide</a></li>
-                    <li><a href="#">Contact Us</a></li>
-                </ul>
-            </div>
-            <div class="footer-col newsletter-col">
-                <h4>Join the Family</h4>
-                <p>Subscribe for exclusive member updates.</p>
-                <form class="subscribe-form">
-                    <input type="email" placeholder="Your Email">
-                    <button type="submit">Join</button>
-                </form>
-            </div>
-        </div>
-        <div class="footer-bottom text-center">
-            <p>&copy; 2025 Royal Collections. All Rights Reserved.</p>
-        </div>
-    </footer>
-
+    <footer class="site-footer"><div class="container text-center" style="padding: 40px;"><p>&copy; 2025 Royal Collections.</p></div></footer>
     <script src="script.js"></script>
 </body>
 </html>
