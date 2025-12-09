@@ -218,11 +218,15 @@ input, select, textarea { font-family: inherit; }
     overflow: hidden;
     background: var(--color-bg-secondary);
     border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 .product-image-wrapper img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain; /* Changed from cover */
+    padding: 10px; /* Optional: adds breathing room */
     transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 .product-card:hover .product-image-wrapper img { transform: scale(1.06); }
@@ -291,8 +295,11 @@ input, select, textarea { font-family: inherit; }
     aspect-ratio: 4/5;
     border-radius: var(--radius-md);
     overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
-.product-gallery img { width: 100%; height: 100%; object-fit: cover; }
+.product-gallery img { width: 100%; height: 100%; object-fit: contain; padding: 20px; }
 
 .product-info-col h1 {
     font-family: var(--font-heading);
@@ -342,9 +349,10 @@ input, select, textarea { font-family: inherit; }
 .cart-table-wrapper { border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }
 .modern-table { width: 100%; border-collapse: collapse; }
 .modern-table th { background: var(--color-bg-secondary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; padding: 18px; text-align: left; font-weight: 600; }
-.modern-table td { padding: 20px 18px; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
-.cart-item-flex { display: flex; align-items: center; gap: 20px; }
-.cart-thumb { width: 80px; height: 100px; object-fit: cover; border-radius: 4px; }
+/* Changed vertical-align to top for admin alignment */
+.modern-table td { padding: 20px 18px; border-bottom: 1px solid var(--color-border); vertical-align: top; }
+.cart-item-flex { display: flex; align-items: flex-start; gap: 20px; }
+.cart-thumb { width: 80px; height: 100px; object-fit: contain; border-radius: 4px; background: #f4f4f4; }
 .cart-item-details h4 { font-size: 0.95rem; margin-bottom: 5px; }
 .cart-item-details span { font-size: 0.85rem; color: var(--color-secondary); }
 
@@ -384,8 +392,12 @@ input, select, textarea { font-family: inherit; }
 .order-info h5 { text-transform: uppercase; font-size: 0.75rem; color: var(--color-secondary); letter-spacing: 1px; margin-bottom: 10px; }
 .order-info p { margin-bottom: 5px; font-size: 0.95rem; }
 .order-items-list { background: var(--color-bg-secondary); padding: 15px; border-radius: var(--radius-sm); }
-.order-item-row { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 8px; border-bottom: 1px dashed #ddd; padding-bottom: 8px; }
+
+/* Improved Order Item Row for Image support */
+.order-item-row { display: grid; grid-template-columns: 50px 1fr auto; gap: 15px; align-items: center; font-size: 0.9rem; margin-bottom: 10px; border-bottom: 1px dashed #ddd; padding-bottom: 10px; }
 .order-item-row:last-child { border: none; margin: 0; padding: 0; }
+.order-item-img { width: 40px; height: 40px; object-fit: contain; background: white; border-radius: 4px; border: 1px solid #eee; }
+
 .order-total-row { display: flex; justify-content: flex-end; align-items: center; gap: 15px; margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--color-border); }
 .status-badge { padding: 5px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
 .status-pending { background: #fff3cd; color: #856404; }
@@ -401,8 +413,8 @@ input, select, textarea { font-family: inherit; }
 
 /* Quick View */
 .qv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
-.qv-img-wrap { aspect-ratio: 3/4; border-radius: var(--radius-sm); overflow: hidden; }
-.qv-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+.qv-img-wrap { aspect-ratio: 3/4; border-radius: var(--radius-sm); overflow: hidden; display:flex; align-items:center; justify-content:center; background:#f4f4f4; }
+.qv-img-wrap img { width: 100%; height: 100%; object-fit: contain; padding: 10px; }
 
 /* Toast */
 .cart-toast { position: fixed; top: 20px; right: 20px; background: #fff; box-shadow: 0 10px 40px rgba(0,0,0,0.15); border-radius: var(--radius-sm); z-index: 3000; overflow: hidden; transform: translateX(150%); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; min-width: 300px; }

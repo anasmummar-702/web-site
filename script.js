@@ -779,15 +779,19 @@ async function loadAdminProducts() {
 
             return `
             <tr>
-                <td style="display:flex; align-items:center; gap:15px;">
-                    <img src="${p.image_url}" style="width:50px; height:50px; object-fit:cover; border-radius:4px;">
-                    <span style="font-weight:500;">${p.name}</span>
+                <td>
+                    <div style="display:flex; align-items:center; gap:15px;">
+                        <img src="${p.image_url}" style="width:50px; height:50px; object-fit:contain; border-radius:4px; background:white; border:1px solid #eee;">
+                        <span style="font-weight:500;">${p.name}</span>
+                    </div>
                 </td>
                 <td>${p.category}</td>
                 <td>${variantStr}</td>
                 <td>
-                    <button class="btn btn-sm btn-outline-dark" onclick="editProduct(${p.id})"><i class="fas fa-edit"></i></button>
-                    <button class="btn btn-sm btn-outline-dark" style="color:#e74c3c; border-color:#e74c3c;" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button>
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn btn-sm btn-outline-dark" onclick="editProduct(${p.id})"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm btn-outline-dark" style="color:#e74c3c; border-color:#e74c3c;" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button>
+                    </div>
                 </td>
             </tr>
             `;
@@ -800,6 +804,15 @@ async function loadAdminOrders() {
     if(!grid) return;
 
     grid.innerHTML = '<p class="text-center">Loading orders...</p>';
+
+    // Fetch products first to map images to names
+    const { data: allProducts } = await sb.from('products').select('name, image_url');
+    const productImgMap = {};
+    if (allProducts) {
+        allProducts.forEach(p => {
+            productImgMap[p.name] = p.image_url;
+        });
+    }
 
     const { data: orders } = await sb.from('orders').select('*').order('created_at', { ascending: false });
     
@@ -814,12 +827,28 @@ async function loadAdminOrders() {
         const items = allItems.filter(i => i.order_id === o.id);
         const statusClass = o.status === 'Pending' ? 'status-pending' : 'status-paid';
         
-        const itemsHtml = items.map(i => `
+        const itemsHtml = items.map(i => {
+            let imgUrl = 'https://via.placeholder.com/40'; // Fallback
+            
+            // Try exact match first
+            if (productImgMap[i.product_name]) {
+                imgUrl = productImgMap[i.product_name];
+            } else {
+                // Try fuzzy match by removing size suffix "(Size)"
+                const baseName = i.product_name.replace(/\s\([a-zA-Z0-9]+\)$/, '');
+                if (productImgMap[baseName]) {
+                    imgUrl = productImgMap[baseName];
+                }
+            }
+
+            return `
             <div class="order-item-row">
+                <img src="${imgUrl}" class="order-item-img">
                 <span>${i.product_name} x ${i.quantity}</span>
                 <span style="font-weight:600">₹${i.subtotal}</span>
             </div>
-        `).join('');
+            `;
+        }).join('');
 
         return `
         <div class="order-card">
