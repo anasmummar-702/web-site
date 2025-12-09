@@ -294,7 +294,21 @@ async function validateCartStock() {
     }
 }
 
-async function initHomePage() { }
+async function initHomePage() {
+    const container = document.getElementById('home-products-grid');
+    if (!container) return;
+
+    const { data: products } = await sb.from('products')
+        .select('*')
+        .order('id', {ascending: false})
+        .limit(8);
+
+    if (products && products.length > 0) {
+        renderProducts(products, container);
+    } else {
+        container.innerHTML = '<p style="grid-column:1/-1;text-align:center;">Our latest collection is arriving soon.</p>';
+    }
+}
 
 async function initListingPage() {
     const container = document.querySelector('.product-grid');
@@ -567,6 +581,7 @@ function initCartPage() {
     let total = 0;
     container.innerHTML = cart.map((item, index) => {
         total += item.price * item.qty;
+        // Added data-labels for mobile responsive CSS
         return `
             <tr>
                 <td>
@@ -578,16 +593,20 @@ function initCartPage() {
                         </div>
                     </div>
                 </td>
-                <td>₹${item.price}</td>
-                <td>
+                <td data-label="Price">₹${item.price}</td>
+                <td data-label="Quantity">
                     <div style="display:flex; align-items:center; gap:10px;">
                         <button class="btn btn-sm btn-outline-dark" onclick="updateQty(${index}, -1)">-</button>
                         <span>${item.qty}</span>
                         <button class="btn btn-sm btn-outline-dark" onclick="updateQty(${index}, 1)">+</button>
                     </div>
                 </td>
-                <td>₹${item.price * item.qty}</td>
-                <td><button onclick="removeFromCart(${index})" style="color:#999;border:none;background:none;cursor:pointer"><i class="fas fa-times"></i></button></td>
+                <td data-label="Total" style="font-weight:600;">₹${item.price * item.qty}</td>
+                <td data-label="">
+                    <button onclick="removeFromCart(${index})" style="color:#e74c3c; border:none; background:none; cursor:pointer; font-size:1.1rem;">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </td>
             </tr>
         `;
     }).join('');
@@ -767,16 +786,16 @@ async function loadAdminProducts() {
             let variantStr = '';
             if (p.variants) {
                 for (const [size, details] of Object.entries(p.variants)) {
-                    variantStr += `<div style="font-size:0.85rem; margin-bottom:4px;">
-                        <span style="font-weight:600; min-width:25px; display:inline-block;">${size}:</span> 
-                        ₹${details.price} 
-                        <span style="color:#666; margin-left:5px;">(Stock: ${details.stock})</span>
+                    variantStr += `<div style="font-size:0.85rem; margin-bottom:4px; display:flex; justify-content:space-between; width:100%; max-width:200px;">
+                        <span><span style="font-weight:600;">${size}</span>: ₹${details.price}</span>
+                        <span style="color:#666; margin-left:10px;">Stock: ${details.stock}</span>
                     </div>`;
                 }
             } else {
                 variantStr = `<div style="color:#666; font-style:italic;">Legacy: ₹${p.price} (${p.stock_quantity})</div>`;
             }
 
+            // Added data-labels for mobile cards
             return `
             <tr>
                 <td>
@@ -785,9 +804,9 @@ async function loadAdminProducts() {
                         <span style="font-weight:500;">${p.name}</span>
                     </div>
                 </td>
-                <td>${p.category}</td>
-                <td>${variantStr}</td>
-                <td>
+                <td data-label="Category">${p.category}</td>
+                <td data-label="Variants">${variantStr}</td>
+                <td data-label="Actions">
                     <div style="display:flex; gap:10px;">
                         <button class="btn btn-sm btn-outline-dark" onclick="editProduct(${p.id})"><i class="fas fa-edit"></i></button>
                         <button class="btn btn-sm btn-outline-dark" style="color:#e74c3c; border-color:#e74c3c;" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button>
@@ -805,7 +824,6 @@ async function loadAdminOrders() {
 
     grid.innerHTML = '<p class="text-center">Loading orders...</p>';
 
-    // Fetch products first to map images to names
     const { data: allProducts } = await sb.from('products').select('name, image_url');
     const productImgMap = {};
     if (allProducts) {
@@ -828,13 +846,11 @@ async function loadAdminOrders() {
         const statusClass = o.status === 'Pending' ? 'status-pending' : 'status-paid';
         
         const itemsHtml = items.map(i => {
-            let imgUrl = 'https://via.placeholder.com/40'; // Fallback
+            let imgUrl = 'https://via.placeholder.com/40';
             
-            // Try exact match first
             if (productImgMap[i.product_name]) {
                 imgUrl = productImgMap[i.product_name];
             } else {
-                // Try fuzzy match by removing size suffix "(Size)"
                 const baseName = i.product_name.replace(/\s\([a-zA-Z0-9]+\)$/, '');
                 if (productImgMap[baseName]) {
                     imgUrl = productImgMap[baseName];

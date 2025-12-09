@@ -11,8 +11,8 @@
     <style>body { background-color: #f4f6f8; }</style>
 </head>
 <body>
-    <header style="background: #fff; border-bottom: 1px solid #ddd; padding: 20px 40px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto;">
+    <header class="admin-main-header">
+        <div class="admin-main-header-content">
             <div class="brand-logo"><a href="index.html"><h1>Royal Admin</h1></a></div>
             <a href="index.html" class="btn btn-outline-dark btn-sm">Back to Store</a>
         </div>
@@ -34,7 +34,7 @@
         </div>
 
         <div id="products-section" class="admin-section" style="display: none;">
-            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 40px;">
+            <div class="admin-grid-layout">
                 <div class="form-layout">
                     <h3 style="margin-bottom: 20px; font-family: var(--font-heading);">Add / Edit Product</h3>
                     <form id="product-form">
@@ -95,13 +95,13 @@
                     </form>
                 </div>
 
-                <div style="background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                <div style="background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; height: fit-content;">
                     <table class="modern-table">
                         <thead>
                             <tr>
                                 <th>Product</th>
                                 <th>Category</th>
-                                <th>Variants (Size: Price | Stock)</th>
+                                <th>Variants</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
