@@ -321,6 +321,22 @@ input, select, textarea { font-family: inherit; }
 .meta-features { margin-top: 40px; border-top: 1px solid var(--color-border); padding-top: 30px; }
 .meta-item { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; color: var(--color-secondary); font-size: 0.9rem; }
 
+/* Variants Admin Grid */
+.variant-admin-grid {
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: 4px;
+    border: 1px solid var(--color-border);
+}
+.variant-row {
+    display: grid;
+    grid-template-columns: 50px 1fr 1fr;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.variant-row label { font-weight: 700; color: var(--color-primary); }
+
 /* Cart Page */
 .cart-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 60px; margin: 60px 0; }
 .cart-table-wrapper { border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }

@@ -141,35 +141,34 @@ function showRoyalToast(title, message, isError = false) {
     }, 3000);
 }
 
-function restrictInputToStock(inputElement, productId, totalStock) {
+function restrictInputToStock(inputElement, productId, totalStock, size) {
     const inCartQty = cart
-        .filter(item => item.id === productId)
+        .filter(item => item.id === productId && item.size === size)
         .reduce((sum, item) => sum + item.qty, 0);
 
     const remainingAllowed = Math.max(0, totalStock - inCartQty);
 
     inputElement.max = remainingAllowed;
     inputElement.min = 1;
-    inputElement.value = 1;
+    inputElement.value = remainingAllowed > 0 ? 1 : 0;
 
     if (remainingAllowed === 0) {
         inputElement.disabled = true;
-        inputElement.value = 0;
     } else {
         inputElement.disabled = false;
     }
 
-    inputElement.addEventListener('input', function() {
+    inputElement.oninput = function() {
         let val = parseInt(this.value);
         if (isNaN(val)) return;
 
         if (val > remainingAllowed) {
             this.value = remainingAllowed;
-            showRoyalToast('Limit Reached', `Only ${remainingAllowed} more available.`, true);
-        } else if (val < 1) {
+            showRoyalToast('Limit Reached', `Only ${remainingAllowed} available in ${size}.`, true);
+        } else if (val < 1 && remainingAllowed > 0) {
             this.value = 1;
         }
-    });
+    };
 
     return remainingAllowed;
 }
@@ -227,7 +226,7 @@ async function validateCartStock() {
     if (cart.length === 0) return;
 
     const ids = [...new Set(cart.map(item => item.id))];
-    const { data: dbProducts } = await sb.from('products').select('id, stock_quantity, name').in('id', ids);
+    const { data: dbProducts } = await sb.from('products').select('*').in('id', ids);
 
     if (!dbProducts) return;
 
@@ -235,33 +234,45 @@ async function validateCartStock() {
     let cartUpdated = false;
 
     dbProducts.forEach(dbItem => {
-        const cartItemsForProduct = cart.filter(c => c.id === dbItem.id);
-        let totalReserved = cartItemsForProduct.reduce((sum, c) => sum + c.qty, 0);
-
-        if (totalReserved > dbItem.stock_quantity) {
-            let available = dbItem.stock_quantity;
-            for (let i = cartItemsForProduct.length - 1; i >= 0; i--) {
-                const item = cartItemsForProduct[i];
-                if (available === 0) {
-                    item.qty = 0; 
-                } else if (item.qty > available) {
-                    item.qty = available;
-                    available = 0;
-                } else {
-                    available -= item.qty;
-                }
-                item.maxStock = dbItem.stock_quantity; 
+        const sizesInCart = [...new Set(cart.filter(c => c.id === dbItem.id).map(c => c.size))];
+        
+        sizesInCart.forEach(size => {
+            const cartItemsForVariant = cart.filter(c => c.id === dbItem.id && c.size === size);
+            
+            let variantStock = 0;
+            if (dbItem.variants && dbItem.variants[size]) {
+                variantStock = parseInt(dbItem.variants[size].stock);
+            } else if (!dbItem.variants) {
+                variantStock = Math.floor(dbItem.stock_quantity / 4); 
             }
-            changes.push(`Stock for "<strong>${dbItem.name}</strong>" decreased.`);
-            cartUpdated = true;
-        } else {
-            cartItemsForProduct.forEach(item => {
-                if(item.maxStock !== dbItem.stock_quantity) {
-                    item.maxStock = dbItem.stock_quantity;
-                    cartUpdated = true;
+
+            let totalReserved = cartItemsForVariant.reduce((sum, c) => sum + c.qty, 0);
+
+            if (totalReserved > variantStock) {
+                let available = variantStock;
+                for (let i = cartItemsForVariant.length - 1; i >= 0; i--) {
+                    const item = cartItemsForVariant[i];
+                    if (available === 0) {
+                        item.qty = 0; 
+                    } else if (item.qty > available) {
+                        item.qty = available;
+                        available = 0;
+                    } else {
+                        available -= item.qty;
+                    }
+                    item.maxStock = variantStock; 
                 }
-            });
-        }
+                changes.push(`Stock for "<strong>${dbItem.name} (${size})</strong>" adjusted to ${variantStock}.`);
+                cartUpdated = true;
+            } else {
+                cartItemsForVariant.forEach(item => {
+                    if(item.maxStock !== variantStock) {
+                        item.maxStock = variantStock;
+                        cartUpdated = true;
+                    }
+                });
+            }
+        });
     });
 
     cart.forEach(item => {
@@ -300,7 +311,6 @@ async function initListingPage() {
         const { data: products } = await sb.from('products')
             .select('*')
             .eq('category', category)
-            .gt('stock_quantity', 0)
             .order('id', {ascending: false}); 
 
         if (products && products.length > 0) {
@@ -316,9 +326,24 @@ function renderProducts(products, container) {
     container.innerHTML = '';
     
     products.forEach(p => {
-        const isOutOfStock = p.stock_quantity <= 0;
+        let totalStock = p.stock_quantity;
+        let minPrice = p.price;
+        let maxPrice = p.price;
+
+        if(p.variants) {
+            totalStock = Object.values(p.variants).reduce((sum, v) => sum + Number(v.stock), 0);
+            const prices = Object.values(p.variants).map(v => Number(v.price));
+            minPrice = Math.min(...prices);
+            maxPrice = Math.max(...prices);
+        }
+
+        const isOutOfStock = totalStock <= 0;
         const badge = isOutOfStock ? '<div class="product-badge" style="background:var(--color-error);color:#fff;">Sold Out</div>' : '';
-        const action = isOutOfStock ? '' : `onclick="openQuickView(${p.id})"`;
+        
+        let priceDisplay = `₹${minPrice}`;
+        if (minPrice !== maxPrice) {
+            priceDisplay = `From ₹${minPrice}`;
+        }
 
         const card = document.createElement('div');
         card.className = 'product-card';
@@ -333,53 +358,75 @@ function renderProducts(products, container) {
             </div>
             <div class="product-details">
                 <h4 class="product-title"><a href="product.html?id=${p.id}">${p.name}</a></h4>
-                <div class="product-price">₹${p.price}</div>
+                <div class="product-price">${priceDisplay}</div>
             </div>
         `;
         container.appendChild(card);
     });
 }
 
+let currentQuickViewProduct = null;
 window.openQuickView = (id) => {
     const product = currentProducts.find(p => p.id === id);
     if (!product) return;
+    currentQuickViewProduct = product;
 
     document.getElementById('qv-img').src = product.image_url;
     document.getElementById('qv-title').innerText = product.name;
-    document.getElementById('qv-price').innerText = `₹${product.price}`;
     document.getElementById('qv-link').href = `product.html?id=${product.id}`;
     
-    const stockEl = document.getElementById('qv-stock');
-    const addBtn = document.getElementById('qv-add-btn');
+    const sizeSelect = document.getElementById('qv-size');
     const qtyInput = document.getElementById('qv-qty');
-    
-    if(product.stock_quantity > 0) {
-        stockEl.innerText = `In Stock (${product.stock_quantity} available)`;
-        stockEl.style.color = 'var(--color-success)';
-        
-        const remaining = restrictInputToStock(qtyInput, product.id, product.stock_quantity);
+    const btn = document.getElementById('qv-add-btn');
 
-        if(remaining > 0) {
-            addBtn.disabled = false;
-            addBtn.innerText = "Add to Bag";
-            addBtn.onclick = () => {
-                const qty = parseInt(qtyInput.value);
-                const size = document.getElementById('qv-size').value;
-                addToCart(product.id, product.name, product.price, product.image_url, product.stock_quantity, qty, size);
-                closeQuickView();
-            };
+    sizeSelect.value = 'M';
+
+    function updateQuickViewUI() {
+        const size = sizeSelect.value;
+        let variantStock = 0;
+        let variantPrice = product.price;
+
+        if (product.variants && product.variants[size]) {
+            variantStock = product.variants[size].stock;
+            variantPrice = product.variants[size].price;
         } else {
-            addBtn.disabled = true;
-            addBtn.innerText = "Max Limit in Cart";
-            addBtn.onclick = null;
+            variantStock = Math.floor(product.stock_quantity / 4); 
         }
 
-    } else {
-        stockEl.innerText = "Out of Stock";
-        stockEl.style.color = 'var(--color-error)';
-        addBtn.disabled = true;
-        addBtn.innerText = "Sold Out";
+        document.getElementById('qv-price').innerText = `₹${variantPrice}`;
+        const stockEl = document.getElementById('qv-stock');
+
+        if (variantStock > 0) {
+            stockEl.innerText = `In Stock (${variantStock} available)`;
+            stockEl.style.color = 'var(--color-success)';
+            
+            const remaining = restrictInputToStock(qtyInput, product.id, variantStock, size);
+
+            if(remaining > 0) {
+                btn.disabled = false;
+                btn.innerText = "Add to Bag";
+                btn.onclick = () => {
+                    const qty = parseInt(qtyInput.value);
+                    addToCart(product.id, product.name, variantPrice, product.image_url, variantStock, qty, size);
+                    closeQuickView();
+                };
+            } else {
+                btn.disabled = true;
+                btn.innerText = "Max Limit in Cart";
+                btn.onclick = null;
+            }
+        } else {
+            stockEl.innerText = "Out of Stock";
+            stockEl.style.color = 'var(--color-error)';
+            btn.disabled = true;
+            btn.innerText = "Sold Out";
+            qtyInput.disabled = true;
+            qtyInput.value = 0;
+        }
     }
+
+    sizeSelect.onchange = updateQuickViewUI;
+    updateQuickViewUI(); 
 
     document.getElementById('quick-view-modal').classList.add('open');
 }
@@ -398,49 +445,67 @@ async function initProductDetail() {
     if(product) {
         document.getElementById('detail-img').src = product.image_url;
         document.getElementById('detail-title').innerText = product.name;
-        document.getElementById('detail-price').innerText = `₹${product.price}`;
         document.getElementById('detail-desc').innerText = product.description || 'No description available.';
         document.getElementById('breadcrumb-category').innerText = product.category;
         document.getElementById('breadcrumb-name').innerText = product.name;
         document.getElementById('detail-cat-tag').innerText = product.category;
         
-        const btn = document.getElementById('add-to-cart-btn');
-        const stockEl = document.getElementById('stock-indicator');
+        const sizeSelect = document.getElementById('detail-size');
         const qtyInput = document.getElementById('detail-qty');
-        
-        if (product.stock_quantity > 0) {
-            stockEl.innerText = `In Stock (${product.stock_quantity} units)`;
-            stockEl.className = 'stock-status in';
-            
-            const remaining = restrictInputToStock(qtyInput, product.id, product.stock_quantity);
+        const btn = document.getElementById('add-to-cart-btn');
+        const priceEl = document.getElementById('detail-price');
+        const stockEl = document.getElementById('stock-indicator');
 
-            if (remaining > 0) {
-                btn.disabled = false;
-                btn.innerText = "Add to Bag";
-                btn.onclick = () => {
-                    const qty = parseInt(qtyInput.value);
-                    const size = document.getElementById('detail-size').value;
-                    addToCart(product.id, product.name, product.price, product.image_url, product.stock_quantity, qty, size);
-                    
-                    const newRemaining = restrictInputToStock(qtyInput, product.id, product.stock_quantity);
-                    if (newRemaining <= 0) {
-                        btn.disabled = true;
-                        btn.innerText = "Limit Reached";
-                    }
-                };
+        function updateDetailUI() {
+            const size = sizeSelect.value;
+            let variantStock = 0;
+            let variantPrice = product.price;
+
+            if (product.variants && product.variants[size]) {
+                variantStock = parseInt(product.variants[size].stock);
+                variantPrice = parseInt(product.variants[size].price);
             } else {
-                btn.disabled = true;
-                btn.innerText = "Limit Reached in Cart";
-                qtyInput.disabled = true;
+                variantStock = Math.floor(product.stock_quantity / 4);
             }
 
-        } else {
-            stockEl.innerText = "Currently Out of Stock";
-            stockEl.className = 'stock-status out';
-            btn.innerText = "Sold Out";
-            btn.disabled = true;
-            qtyInput.disabled = true;
+            priceEl.innerText = `₹${variantPrice}`;
+
+            if (variantStock > 0) {
+                stockEl.innerText = `In Stock (${variantStock} units)`;
+                stockEl.className = 'stock-status in';
+                
+                const remaining = restrictInputToStock(qtyInput, product.id, variantStock, size);
+
+                if (remaining > 0) {
+                    btn.disabled = false;
+                    btn.innerText = "Add to Bag";
+                    btn.onclick = () => {
+                        const qty = parseInt(qtyInput.value);
+                        addToCart(product.id, product.name, variantPrice, product.image_url, variantStock, qty, size);
+                        
+                        const newRemaining = restrictInputToStock(qtyInput, product.id, variantStock, size);
+                        if (newRemaining <= 0) {
+                            btn.disabled = true;
+                            btn.innerText = "Limit Reached";
+                        }
+                    };
+                } else {
+                    btn.disabled = true;
+                    btn.innerText = "Limit Reached in Cart";
+                    qtyInput.disabled = true;
+                }
+            } else {
+                stockEl.innerText = "Currently Out of Stock";
+                stockEl.className = 'stock-status out';
+                btn.innerText = "Sold Out";
+                btn.disabled = true;
+                qtyInput.disabled = true;
+                qtyInput.value = 0;
+            }
         }
+
+        sizeSelect.addEventListener('change', updateDetailUI);
+        updateDetailUI();
     }
 }
 
@@ -448,11 +513,11 @@ function addToCart(id, name, price, img, maxStock, qty = 1, size = 'M') {
     const cartItemId = `${id}-${size}`;
     
     const existingTotal = cart
-        .filter(item => item.id === id)
+        .filter(item => item.id === id && item.size === size)
         .reduce((sum, item) => sum + item.qty, 0);
         
     if ((existingTotal + qty) > maxStock) {
-        showRoyalAlert('Stock Limitation', `Sorry, only ${maxStock} units available.`, 'error');
+        showRoyalAlert('Stock Limitation', `Sorry, only ${maxStock} units available for size ${size}.`, 'error');
         return;
     }
 
@@ -465,10 +530,10 @@ function addToCart(id, name, price, img, maxStock, qty = 1, size = 'M') {
             cartItemId, 
             id, 
             name: `${name} (${size})`, 
-            price, 
+            price: Number(price), 
             img, 
             qty, 
-            maxStock,
+            maxStock: Number(maxStock),
             size 
         }); 
     }
@@ -535,11 +600,7 @@ function updateQty(index, change) {
     const item = cart[index];
     
     if (change > 0) {
-        const productTotalQty = cart
-            .filter(c => c.id === item.id)
-            .reduce((sum, c) => sum + c.qty, 0);
-            
-        if (productTotalQty >= item.maxStock) {
+        if (item.qty >= item.maxStock) {
             showRoyalToast('Limit Reached', `Maximum stock reached for this item.`, true);
             return;
         }
@@ -656,13 +717,26 @@ function initAdmin() {
 
                 if (!imageUrl) throw new Error("Please provide an Image URL or upload a file.");
 
+                const variants = {
+                    'S': { price: document.getElementById('price-S').value, stock: document.getElementById('stock-S').value },
+                    'M': { price: document.getElementById('price-M').value, stock: document.getElementById('stock-M').value },
+                    'L': { price: document.getElementById('price-L').value, stock: document.getElementById('stock-L').value },
+                    'XL': { price: document.getElementById('price-XL').value, stock: document.getElementById('stock-XL').value }
+                };
+                
+                const stocks = Object.values(variants).map(v => Number(v.stock));
+                const prices = Object.values(variants).map(v => Number(v.price));
+                const totalStock = stocks.reduce((a,b) => a+b, 0);
+                const minPrice = Math.min(...prices);
+
                 const payload = {
                     name: document.getElementById('prod-name').value,
-                    price: document.getElementById('prod-price').value,
                     category: document.getElementById('prod-category').value,
-                    stock_quantity: document.getElementById('prod-stock').value,
                     image_url: imageUrl,
-                    description: document.getElementById('prod-desc').value
+                    description: document.getElementById('prod-desc').value,
+                    variants: variants,
+                    price: minPrice, 
+                    stock_quantity: totalStock 
                 };
 
                 let error;
@@ -689,20 +763,35 @@ async function loadAdminProducts() {
     const { data: products } = await sb.from('products').select('*').order('id', { ascending: false });
     const tbody = document.getElementById('admin-products-body');
     if(tbody && products) {
-        tbody.innerHTML = products.map(p => `
+        tbody.innerHTML = products.map(p => {
+            let variantStr = '';
+            if (p.variants) {
+                for (const [size, details] of Object.entries(p.variants)) {
+                    variantStr += `<div style="font-size:0.85rem; margin-bottom:4px;">
+                        <span style="font-weight:600; min-width:25px; display:inline-block;">${size}:</span> 
+                        ₹${details.price} 
+                        <span style="color:#666; margin-left:5px;">(Stock: ${details.stock})</span>
+                    </div>`;
+                }
+            } else {
+                variantStr = `<div style="color:#666; font-style:italic;">Legacy: ₹${p.price} (${p.stock_quantity})</div>`;
+            }
+
+            return `
             <tr>
-                <td style="display:flex; align-items:center; gap:10px;">
-                    <img src="${p.image_url}" style="width:40px; height:40px; object-fit:cover; border-radius:4px;">
-                    <div>${p.name}</div>
+                <td style="display:flex; align-items:center; gap:15px;">
+                    <img src="${p.image_url}" style="width:50px; height:50px; object-fit:cover; border-radius:4px;">
+                    <span style="font-weight:500;">${p.name}</span>
                 </td>
-                <td>₹${p.price}</td>
-                <td>${p.stock_quantity}</td>
+                <td>${p.category}</td>
+                <td>${variantStr}</td>
                 <td>
-                    <button class="btn btn-sm btn-outline-dark" onclick="editProduct(${p.id})">Edit</button>
-                    <button class="btn btn-sm btn-outline-dark" style="color:red; border-color:red" onclick="deleteProduct(${p.id})">Del</button>
+                    <button class="btn btn-sm btn-outline-dark" onclick="editProduct(${p.id})"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-outline-dark" style="color:#e74c3c; border-color:#e74c3c;" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>
-        `).join('');
+            `;
+        }).join('');
     }
 }
 
@@ -779,11 +868,24 @@ window.editProduct = async (id) => {
     if(p) {
         document.getElementById('prod-id').value = p.id;
         document.getElementById('prod-name').value = p.name;
-        document.getElementById('prod-price').value = p.price;
         document.getElementById('prod-category').value = p.category;
-        document.getElementById('prod-stock').value = p.stock_quantity;
         document.getElementById('prod-image-url').value = p.image_url;
         document.getElementById('prod-desc').value = p.description || '';
+        
+        if(p.variants) {
+            ['S', 'M', 'L', 'XL'].forEach(size => {
+                if(p.variants[size]) {
+                    document.getElementById(`price-${size}`).value = p.variants[size].price;
+                    document.getElementById(`stock-${size}`).value = p.variants[size].stock;
+                }
+            });
+        } else {
+            ['S', 'M', 'L', 'XL'].forEach(size => {
+                document.getElementById(`price-${size}`).value = p.price;
+                document.getElementById(`stock-${size}`).value = Math.floor(p.stock_quantity/4);
+            });
+        }
+
         document.querySelector('.tab-btn[data-target="products-section"]').click();
         window.scrollTo(0,0);
     }
