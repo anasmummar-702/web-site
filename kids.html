@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <div class="announcement-bar"><p>Free Shipping on Orders Over ₹2500</p></div>
@@ -15,7 +16,7 @@
         <div class="header-main container">
             <div class="mobile-menu-toggle"><i class="fas fa-bars"></i></div>
             <div class="brand-logo"><a href="index.html"><h1>Royal Collections</h1></a></div>
-            <div class="header-icons"><a href="#" class="cart-icon"><i class="fas fa-shopping-bag"></i></a></div>
+            <div class="header-icons"><a href="cart.html" class="cart-icon"><i class="fas fa-shopping-bag"></i><span class="cart-count">0</span></a></div>
         </div>
         <nav class="main-navigation">
             <ul class="nav-list">
@@ -29,7 +30,6 @@
         </nav>
     </header>
 
-    <!-- NEW PAGE HERO -->
     <div class="page-hero" style="background-image: url('https://images.unsplash.com/photo-1629814467554-150774a3832d?q=80&w=1600&auto=format&fit=crop');">
         <div class="page-hero-content">
             <h2>Little Royals</h2>
@@ -39,52 +39,10 @@
 
     <section class="container" style="padding: 0 20px 60px 20px;">
         <div class="product-grid">
-            <div class="product-card">
-                <div class="product-image">
-                    <img src="https://images.unsplash.com/photo-1609176378415-46c96822c91a?q=80&w=400&auto=format&fit=crop" alt="Sherwani">
-                    <div class="hover-actions"><button class="action-btn"><i class="fas fa-shopping-bag"></i></button></div>
-                </div>
-                <div class="product-info">
-                    <div class="category-tag">Little Royals</div>
-                    <h4 class="product-title">Little Prince Sherwani</h4>
-                    <div class="product-price">₹1,999</div>
-                </div>
-            </div>
-            <div class="product-card">
-                <div class="product-image">
-                    <img src="https://images.unsplash.com/photo-1518831501631-4299b8678082?q=80&w=400&auto=format&fit=crop" alt="Frock">
-                    <div class="hover-actions"><button class="action-btn"><i class="fas fa-shopping-bag"></i></button></div>
-                </div>
-                <div class="product-info">
-                    <div class="category-tag">Little Royals</div>
-                    <h4 class="product-title">Princess Tulle Frock</h4>
-                    <div class="product-price">₹1,499</div>
-                </div>
-            </div>
-            <div class="product-card">
-                <div class="product-image">
-                    <img src="https://images.unsplash.com/photo-1503919545889-aef6d7a12cc6?q=80&w=400&auto=format&fit=crop" alt="Dhoti">
-                    <div class="hover-actions"><button class="action-btn"><i class="fas fa-shopping-bag"></i></button></div>
-                </div>
-                <div class="product-info">
-                    <div class="category-tag">Little Royals</div>
-                    <h4 class="product-title">Festive Dhoti Set</h4>
-                    <div class="product-price">₹1,199</div>
-                </div>
-            </div>
-             <div class="product-card">
-                <div class="product-image">
-                    <img src="https://images.unsplash.com/photo-1519238263496-6362d74c1123?q=80&w=400&auto=format&fit=crop" alt="Blazer">
-                    <div class="hover-actions"><button class="action-btn"><i class="fas fa-shopping-bag"></i></button></div>
-                </div>
-                <div class="product-info">
-                    <div class="category-tag">Little Royals</div>
-                    <h4 class="product-title">Velvet Party Coat</h4>
-                    <div class="product-price">₹2,100</div>
-                </div>
-            </div>
+            <p style="grid-column: 1/-1; text-align: center; padding: 40px;">Loading collection...</p>
         </div>
     </section>
+    
     <footer class="site-footer"><div class="container text-center"><p>&copy; 2025 Royal Collections.</p></div></footer>
     <script src="script.js"></script>
 </body>

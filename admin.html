@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* Light background pattern for admin area */
         body { background-image: radial-gradient(#e5e5e5 1px, transparent 1px); background-size: 20px 20px; }
     </style>
 </head>
@@ -45,7 +44,6 @@
                         <option value="accessories">Accessories</option>
                     </select>
                 </div>
-                <!-- ADDED STOCK INPUT -->
                 <div style="display:flex; gap:20px;">
                     <div class="form-group" style="flex:1">
                         <label>Price (₹)</label>
@@ -56,15 +54,24 @@
                         <input type="number" id="prod-stock" class="form-control" required value="10">
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>Image URL</label>
-                    <input type="text" id="prod-image" class="form-control" placeholder="https://..." required>
+                
+                <div class="form-group" style="background: #f9f9f9; padding: 15px; border: 1px solid #eee;">
+                    <label style="margin-bottom: 10px; display:block;">Product Image</label>
+                    
+                    <label style="font-size: 0.8rem; color: #666;">Option 1: Direct Upload</label>
+                    <input type="file" id="prod-image-file" class="form-control" accept="image/*" style="margin-bottom: 10px;">
+                    
+                    <div style="text-align: center; font-size: 0.8rem; color: #999; margin: 5px 0;">- OR -</div>
+                    
+                    <label style="font-size: 0.8rem; color: #666;">Option 2: Image URL</label>
+                    <input type="text" id="prod-image-url" class="form-control" placeholder="https://...">
                 </div>
+
                 <div class="form-group">
                     <label>Description</label>
                     <textarea id="prod-desc" class="form-control" rows="3"></textarea>
                 </div>
-                <button type="submit" class="btn btn-primary">Save Product</button>
+                <button type="submit" id="save-product-btn" class="btn btn-primary">Save Product</button>
             </form>
 
             <div class="admin-table-container" style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
@@ -79,9 +86,7 @@
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="admin-products-body">
-                        <!-- Loaded by JS -->
-                    </tbody>
+                    <tbody id="admin-products-body"></tbody>
                 </table>
             </div>
         </div>
@@ -99,9 +104,7 @@
                             <th>Details</th>
                         </tr>
                     </thead>
-                    <tbody id="admin-orders-body">
-                        <!-- Loaded by JS -->
-                    </tbody>
+                    <tbody id="admin-orders-body"></tbody>
                 </table>
             </div>
         </div>

@@ -9,12 +9,10 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* Home Specific Overrides */
         .hero-slider { height: 600px; position: relative; overflow: hidden; }
         .hero-slide img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.9); }
         .hero-content { position: absolute; top: 50%; left: 10%; transform: translateY(-50%); background: rgba(255,255,255,0.9); padding: 40px; max-width: 600px; border-left: 5px solid var(--primary-blue); }
         .hero-content h2 { font-family: var(--font-heading); font-size: 3rem; margin-bottom: 20px; line-height: 1.2; }
-        
         .collection-grid { display: grid; grid-template-columns: 2fr 1fr; grid-template-rows: 300px 300px; gap: 20px; padding: 40px 0; }
         .collection-card { position: relative; overflow: hidden; }
         .collection-card img { width: 100%; height: 100%; object-fit: cover; transition: 0.5s; }
@@ -23,13 +21,11 @@
         .collection-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.3); display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; opacity: 0; transition: 0.3s; }
         .collection-card:hover .collection-overlay { opacity: 1; }
         .collection-overlay h3 { font-size: 2rem; font-family: var(--font-heading); margin-bottom: 15px; }
-
         .newsletter-section { background: url('https://images.unsplash.com/photo-1605218427368-35b80a3734e0?q=80&w=1600&auto=format&fit=crop') center/cover fixed; padding: 100px 20px; position: relative; color: white; text-align: center; }
         .newsletter-overlay { position: absolute; inset: 0; background: rgba(6, 81, 132, 0.85); }
         .newsletter-content { position: relative; z-index: 1; max-width: 600px; margin: 0 auto; }
         .subscribe-form { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
         .subscribe-form input { padding: 12px; border: none; width: 60%; }
-        
         @media(max-width: 768px) { .collection-grid { grid-template-columns: 1fr; grid-template-rows: auto; } .hero-content { left: 5%; right: 5%; width: auto; } }
     </style>
 </head>
@@ -56,7 +52,6 @@
 
     <section class="hero-slider">
         <div class="hero-slide active">
-            <!-- New Hero Image -->
             <img src="https://images.unsplash.com/photo-1610030469983-98e550d6193c?q=80&w=1920&auto=format&fit=crop" alt="Hero Image">
             <div class="hero-content">
                 <span style="color:var(--primary-blue); font-weight:700; text-transform:uppercase;">The Azure Season</span>
@@ -97,7 +92,6 @@
         </div>
     </section>
 
-    <!-- Visual Newsletter Section -->
     <section class="newsletter-section">
         <div class="newsletter-overlay"></div>
         <div class="newsletter-content">

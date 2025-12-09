@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <div class="announcement-bar"><p>Free Shipping on Orders Over ₹2500</p></div>
@@ -15,7 +16,7 @@
         <div class="header-main container">
             <div class="mobile-menu-toggle"><i class="fas fa-bars"></i></div>
             <div class="brand-logo"><a href="index.html"><h1>Royal Collections</h1></a></div>
-            <div class="header-icons"><a href="#" class="cart-icon"><i class="fas fa-shopping-bag"></i></a></div>
+            <div class="header-icons"><a href="cart.html" class="cart-icon"><i class="fas fa-shopping-bag"></i><span class="cart-count">0</span></a></div>
         </div>
         <nav class="main-navigation">
             <ul class="nav-list">
@@ -29,7 +30,6 @@
         </nav>
     </header>
 
-    <!-- NEW PAGE HERO -->
     <div class="page-hero" style="background-image: url('https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=1600&auto=format&fit=crop');">
         <div class="page-hero-content">
             <h2>Beauty & Adornments</h2>
@@ -39,52 +39,10 @@
 
     <section class="container" style="padding: 0 20px 60px 20px;">
         <div class="product-grid">
-            <div class="product-card">
-                <div class="product-image">
-                    <img src="https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?q=80&w=400&auto=format&fit=crop" alt="Necklace">
-                    <div class="hover-actions"><button class="action-btn"><i class="fas fa-shopping-bag"></i></button></div>
-                </div>
-                <div class="product-info">
-                    <div class="category-tag">Ornaments</div>
-                    <h4 class="product-title">Diamond Jewellery Set</h4>
-                    <div class="product-price">₹899</div>
-                </div>
-            </div>
-            <div class="product-card">
-                <div class="product-image">
-                    <img src="https://images.unsplash.com/photo-1586495777744-4413f21062fa?q=80&w=400&auto=format&fit=crop" alt="Lipstick">
-                    <div class="hover-actions"><button class="action-btn"><i class="fas fa-shopping-bag"></i></button></div>
-                </div>
-                <div class="product-info">
-                    <div class="category-tag">Cosmetics</div>
-                    <h4 class="product-title">Matte Lipstick Trio</h4>
-                    <div class="product-price">₹599</div>
-                </div>
-            </div>
-            <div class="product-card">
-                <div class="product-image">
-                    <img src="https://images.unsplash.com/photo-1573408301185-9146fe634ad0?q=80&w=400&auto=format&fit=crop" alt="Bangles">
-                    <div class="hover-actions"><button class="action-btn"><i class="fas fa-shopping-bag"></i></button></div>
-                </div>
-                <div class="product-info">
-                    <div class="category-tag">Ornaments</div>
-                    <h4 class="product-title">Silver Plated Bangles</h4>
-                    <div class="product-price">₹450</div>
-                </div>
-            </div>
-            <div class="product-card">
-                <div class="product-image">
-                    <img src="https://images.unsplash.com/photo-1596462502278-27bfdd403348?q=80&w=400&auto=format&fit=crop" alt="Kajal">
-                    <div class="hover-actions"><button class="action-btn"><i class="fas fa-shopping-bag"></i></button></div>
-                </div>
-                <div class="product-info">
-                    <div class="category-tag">Cosmetics</div>
-                    <h4 class="product-title">Organic Kajal</h4>
-                    <div class="product-price">₹299</div>
-                </div>
-            </div>
+            <p style="grid-column: 1/-1; text-align: center; padding: 40px;">Loading collection...</p>
         </div>
     </section>
+    
     <footer class="site-footer"><div class="container text-center"><p>&copy; 2025 Royal Collections.</p></div></footer>
     <script src="script.js"></script>
 </body>
