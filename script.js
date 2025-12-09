@@ -15,7 +15,7 @@ let currentProducts = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
     if (!sb) {
-        document.body.innerHTML = '<div style="padding:50px;text-align:center;color:red;"><h1>System Error</h1><p>Database connection missing.</p></div>';
+        document.body.innerHTML = '<div style="padding:50px;text-align:center;"><h1>System Error</h1><p>Database connection missing.</p></div>';
         return;
     }
 
@@ -44,27 +44,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     const nav = document.querySelector('.main-navigation');
     if(mobileToggle) {
         mobileToggle.addEventListener('click', () => {
-            nav.style.display = nav.style.display === 'block' ? 'none' : 'block';
+            nav.style.display = nav.style.display === 'flex' ? 'none' : 'flex';
         });
     }
 });
 
 function injectCustomAlertSystem() {
     const html = `
-    <div id="royal-alert" class="custom-alert-overlay">
-        <div class="custom-alert-box">
-            <i id="royal-alert-icon" class="fas fa-exclamation-circle alert-icon warning"></i>
-            <h3 id="royal-alert-title" class="alert-title">Notice</h3>
-            <p id="royal-alert-msg" class="alert-message"></p>
+    <div id="royal-alert" class="modal-overlay">
+        <div class="modal-content" style="text-align:center; max-width:400px;">
+            <i id="royal-alert-icon" class="fas fa-exclamation-circle" style="font-size:3rem; margin-bottom:15px; display:block;"></i>
+            <h3 id="royal-alert-title" style="margin-bottom:10px;">Notice</h3>
+            <p id="royal-alert-msg" style="color:#666; margin-bottom:20px;"></p>
             <button class="btn btn-primary" onclick="closeRoyalAlert()">Okay</button>
         </div>
     </div>
-    <div id="royal-confirm" class="custom-alert-overlay">
-        <div class="custom-alert-box">
-            <i class="fas fa-question-circle alert-icon warning" style="color:var(--primary-blue)"></i>
-            <h3 class="alert-title">Are you sure?</h3>
-            <p id="royal-confirm-msg" class="alert-message"></p>
-            <div class="confirm-actions">
+    <div id="royal-confirm" class="modal-overlay">
+        <div class="modal-content" style="text-align:center; max-width:400px;">
+            <i class="fas fa-question-circle" style="font-size:3rem; color:var(--color-accent); margin-bottom:15px; display:block;"></i>
+            <h3 style="margin-bottom:10px;">Are you sure?</h3>
+            <p id="royal-confirm-msg" style="color:#666; margin-bottom:20px;"></p>
+            <div style="display:flex; gap:10px; justify-content:center;">
                 <button id="btn-confirm-no" class="btn btn-outline-dark">Cancel</button>
                 <button id="btn-confirm-yes" class="btn btn-primary">Yes, Proceed</button>
             </div>
@@ -81,10 +81,10 @@ function showRoyalAlert(title, message, type = 'warning') {
     document.getElementById('royal-alert-title').innerText = title;
     document.getElementById('royal-alert-msg').innerText = message;
     
-    icon.className = 'fas alert-icon';
-    if(type === 'error') { icon.classList.add('fa-times-circle', 'error'); }
-    else if(type === 'success') { icon.classList.add('fa-check-circle', 'success'); }
-    else { icon.classList.add('fa-exclamation-circle', 'warning'); }
+    icon.className = 'fas';
+    if(type === 'error') { icon.classList.add('fa-times-circle'); icon.style.color = 'var(--color-error)'; }
+    else if(type === 'success') { icon.classList.add('fa-check-circle'); icon.style.color = 'var(--color-success)'; }
+    else { icon.classList.add('fa-exclamation-circle'); icon.style.color = '#f39c12'; }
 
     overlay.classList.add('open');
 }
@@ -126,13 +126,10 @@ function showRoyalToast(title, message, isError = false) {
     toast = document.createElement('div');
     toast.className = `cart-toast ${isError ? 'error' : ''}`;
     toast.innerHTML = `
-        <div class="toast-content">
-            <div class="toast-header">
-                <span class="toast-title">${title}</span>
-                <span style="cursor:pointer" onclick="this.closest('.cart-toast').remove()">&times;</span>
-            </div>
+        <div class="toast-strip"></div>
+        <div class="toast-body">
+            <div class="toast-title">${title}</div>
             <div class="toast-msg">${message}</div>
-            ${!isError && !window.location.pathname.includes('cart.html') ? '<a href="cart.html" class="btn btn-sm btn-outline-dark" style="width:100%; text-align:center;">View Cart</a>' : ''}
         </div>
     `;
     document.body.appendChild(toast);
@@ -141,7 +138,7 @@ function showRoyalToast(title, message, isError = false) {
     setTimeout(() => {
         toast.classList.remove('show');
         setTimeout(() => toast.remove(), 400); 
-    }, 4000);
+    }, 3000);
 }
 
 function restrictInputToStock(inputElement, productId, totalStock) {
@@ -168,7 +165,7 @@ function restrictInputToStock(inputElement, productId, totalStock) {
 
         if (val > remainingAllowed) {
             this.value = remainingAllowed;
-            showRoyalToast('Limit Reached', `You already have ${inCartQty} in cart. Only ${remainingAllowed} more available.`, true);
+            showRoyalToast('Limit Reached', `Only ${remainingAllowed} more available.`, true);
         } else if (val < 1) {
             this.value = 1;
         }
@@ -180,29 +177,31 @@ function restrictInputToStock(inputElement, productId, totalStock) {
 function injectQuickViewModal() {
     const modalHTML = `
     <div class="modal-overlay" id="quick-view-modal">
-        <div class="modal-content product-modal">
+        <div class="modal-content" style="max-width:800px;">
             <span class="close-modal" onclick="closeQuickView()">&times;</span>
-            <div class="modal-grid">
-                <div class="modal-image-col">
+            <div class="qv-grid">
+                <div class="qv-img-wrap">
                     <img id="qv-img" src="" alt="Product">
                 </div>
-                <div class="modal-details-col">
-                    <h3 id="qv-title" class="qv-title"></h3>
-                    <div id="qv-price" class="qv-price"></div>
-                    <p id="qv-stock" class="qv-stock"></p>
-                    <div class="qv-options">
-                        <label class="qv-label">Size</label>
-                        <select id="qv-size" class="qv-select">
+                <div style="display:flex; flex-direction:column; justify-content:center;">
+                    <h3 id="qv-title" style="font-family:var(--font-heading); font-size:1.8rem; line-height:1.2; margin-bottom:10px;"></h3>
+                    <div id="qv-price" style="font-size:1.4rem; color:var(--color-accent); font-weight:600; margin-bottom:15px;"></div>
+                    <p id="qv-stock" style="margin-bottom:20px; font-size:0.9rem; font-weight:600;"></p>
+                    <div class="control-group">
+                        <label class="control-label">Size</label>
+                        <select id="qv-size" class="select-input">
                             <option value="S">Small</option>
                             <option value="M" selected>Medium</option>
                             <option value="L">Large</option>
                             <option value="XL">Extra Large</option>
                         </select>
-                        <label class="qv-label">Quantity</label>
-                        <input type="number" id="qv-qty" class="qv-select" value="1" min="1">
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Quantity</label>
+                        <input type="number" id="qv-qty" class="qty-input" value="1" min="1">
                     </div>
                     <button id="qv-add-btn" class="btn btn-primary" style="width:100%">Add to Bag</button>
-                    <a id="qv-link" href="#" style="display:block; text-align:center; margin-top:15px; font-size:0.8rem; text-decoration:underline;">View Full Details</a>
+                    <a id="qv-link" href="#" style="display:block; text-align:center; margin-top:15px; font-size:0.8rem; text-decoration:underline; color:#666;">View Full Details</a>
                 </div>
             </div>
         </div>
@@ -215,9 +214,9 @@ function injectStockAlertModal() {
     <div class="modal-overlay" id="stock-alert-modal">
         <div class="modal-content" style="max-width:400px; text-align:center;">
             <span class="close-modal" onclick="document.getElementById('stock-alert-modal').classList.remove('open')">&times;</span>
-            <h3 style="color:var(--text-black); margin-bottom:15px; font-family:var(--font-heading);">Cart Update</h3>
-            <p>Some items in your cart have been updated due to real-time availability changes:</p>
-            <ul id="stock-alert-list" class="alert-list" style="text-align:left;"></ul>
+            <h3 style="margin-bottom:15px; font-family:var(--font-heading);">Cart Update</h3>
+            <p style="margin-bottom:15px;">Availability for some items in your cart has changed:</p>
+            <ul id="stock-alert-list" style="text-align:left; background:#fff3cd; padding:15px; border-radius:4px; font-size:0.9rem; list-style:inside;"></ul>
             <button class="btn btn-primary" onclick="document.getElementById('stock-alert-modal').classList.remove('open')" style="margin-top:20px; width:100%;">Understood</button>
         </div>
     </div>`;
@@ -237,13 +236,10 @@ async function validateCartStock() {
 
     dbProducts.forEach(dbItem => {
         const cartItemsForProduct = cart.filter(c => c.id === dbItem.id);
-        
         let totalReserved = cartItemsForProduct.reduce((sum, c) => sum + c.qty, 0);
 
         if (totalReserved > dbItem.stock_quantity) {
             let available = dbItem.stock_quantity;
-            let removedCount = totalReserved - available;
-
             for (let i = cartItemsForProduct.length - 1; i >= 0; i--) {
                 const item = cartItemsForProduct[i];
                 if (available === 0) {
@@ -256,8 +252,7 @@ async function validateCartStock() {
                 }
                 item.maxStock = dbItem.stock_quantity; 
             }
-            
-            changes.push(`Stock for "<strong>${dbItem.name}</strong>" decreased. Your cart was adjusted.`);
+            changes.push(`Stock for "<strong>${dbItem.name}</strong>" decreased.`);
             cartUpdated = true;
         } else {
             cartItemsForProduct.forEach(item => {
@@ -305,7 +300,8 @@ async function initListingPage() {
         const { data: products } = await sb.from('products')
             .select('*')
             .eq('category', category)
-            .gt('stock_quantity', 0); 
+            .gt('stock_quantity', 0)
+            .order('id', {ascending: false}); 
 
         if (products && products.length > 0) {
             renderProducts(products, container);
@@ -321,24 +317,21 @@ function renderProducts(products, container) {
     
     products.forEach(p => {
         const isOutOfStock = p.stock_quantity <= 0;
-        const btnDisabled = isOutOfStock ? 'disabled style="background:#ccc; cursor:not-allowed"' : '';
-        const badge = isOutOfStock ? '<div style="position:absolute;top:10px;right:10px;background:red;color:white;padding:5px;font-size:0.7rem">OUT OF STOCK</div>' : '';
+        const badge = isOutOfStock ? '<div class="product-badge" style="background:var(--color-error);color:#fff;">Sold Out</div>' : '';
         const action = isOutOfStock ? '' : `onclick="openQuickView(${p.id})"`;
 
         const card = document.createElement('div');
         card.className = 'product-card';
         card.innerHTML = `
-            <div class="product-image">
+            <div class="product-image-wrapper">
                 ${badge}
                 <a href="product.html?id=${p.id}"><img src="${p.image_url}" alt="${p.name}"></a>
-                <div class="hover-actions">
-                    <button class="action-btn" ${btnDisabled} ${action}>
-                        <i class="fas fa-shopping-bag"></i>
-                    </button>
+                <div class="product-actions">
+                    ${!isOutOfStock ? `<button class="action-btn" onclick="openQuickView(${p.id})"><i class="fas fa-eye"></i></button>` : ''}
+                    <a href="product.html?id=${p.id}" class="action-btn"><i class="fas fa-link"></i></a>
                 </div>
             </div>
-            <div class="product-info">
-                <div class="category-tag">${p.category}</div>
+            <div class="product-details">
                 <h4 class="product-title"><a href="product.html?id=${p.id}">${p.name}</a></h4>
                 <div class="product-price">₹${p.price}</div>
             </div>
@@ -361,8 +354,8 @@ window.openQuickView = (id) => {
     const qtyInput = document.getElementById('qv-qty');
     
     if(product.stock_quantity > 0) {
-        stockEl.innerText = `In Stock: ${product.stock_quantity}`;
-        stockEl.style.color = 'green';
+        stockEl.innerText = `In Stock (${product.stock_quantity} available)`;
+        stockEl.style.color = 'var(--color-success)';
         
         const remaining = restrictInputToStock(qtyInput, product.id, product.stock_quantity);
 
@@ -377,13 +370,13 @@ window.openQuickView = (id) => {
             };
         } else {
             addBtn.disabled = true;
-            addBtn.innerText = "Limit Reached in Cart";
+            addBtn.innerText = "Max Limit in Cart";
             addBtn.onclick = null;
         }
 
     } else {
         stockEl.innerText = "Out of Stock";
-        stockEl.style.color = 'red';
+        stockEl.style.color = 'var(--color-error)';
         addBtn.disabled = true;
         addBtn.innerText = "Sold Out";
     }
@@ -416,8 +409,8 @@ async function initProductDetail() {
         const qtyInput = document.getElementById('detail-qty');
         
         if (product.stock_quantity > 0) {
-            stockEl.innerText = `In Stock: ${product.stock_quantity}`;
-            stockEl.style.color = 'green';
+            stockEl.innerText = `In Stock (${product.stock_quantity} units)`;
+            stockEl.className = 'stock-status in';
             
             const remaining = restrictInputToStock(qtyInput, product.id, product.stock_quantity);
 
@@ -442,8 +435,8 @@ async function initProductDetail() {
             }
 
         } else {
-            stockEl.innerText = "Out of Stock";
-            stockEl.style.color = 'red';
+            stockEl.innerText = "Currently Out of Stock";
+            stockEl.className = 'stock-status out';
             btn.innerText = "Sold Out";
             btn.disabled = true;
             qtyInput.disabled = true;
@@ -459,7 +452,7 @@ function addToCart(id, name, price, img, maxStock, qty = 1, size = 'M') {
         .reduce((sum, item) => sum + item.qty, 0);
         
     if ((existingTotal + qty) > maxStock) {
-        showRoyalAlert('Stock Limitation', `Sorry, only ${maxStock} units available. You already have ${existingTotal} in your cart.`, 'error');
+        showRoyalAlert('Stock Limitation', `Sorry, only ${maxStock} units available.`, 'error');
         return;
     }
 
@@ -481,7 +474,7 @@ function addToCart(id, name, price, img, maxStock, qty = 1, size = 'M') {
     }
     
     saveCart();
-    showRoyalToast('Success', `Added ${qty} x ${name} (${size}) to bag`, false);
+    showRoyalToast('Added to Bag', `${name} (${size}) added.`, false);
 }
 
 function saveCart() {
@@ -497,10 +490,12 @@ function updateCartCount() {
 function initCartPage() {
     const container = document.getElementById('cart-items-container');
     const totalEl = document.getElementById('cart-total');
+    const subTotalEl = document.getElementById('sub-total');
     
     if (cart.length === 0) {
-        container.innerHTML = '<tr><td colspan="6" class="text-center" style="padding:40px;">Your shopping bag is empty.</td></tr>';
+        container.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:#999;">Your shopping bag is currently empty.</td></tr>';
         totalEl.innerText = '₹0';
+        if(subTotalEl) subTotalEl.innerText = '₹0';
         return;
     }
 
@@ -509,23 +504,31 @@ function initCartPage() {
         total += item.price * item.qty;
         return `
             <tr>
-                <td><img src="${item.img}" class="cart-item-img"></td>
-                <td>${item.name}</td>
+                <td>
+                    <div class="cart-item-flex">
+                        <img src="${item.img}" class="cart-thumb">
+                        <div class="cart-item-details">
+                            <h4>${item.name}</h4>
+                            <span>ID: ${item.cartItemId}</span>
+                        </div>
+                    </div>
+                </td>
                 <td>₹${item.price}</td>
                 <td>
-                    <button class="qty-btn" onclick="updateQty(${index}, -1)">-</button>
-                    <span style="margin:0 10px">${item.qty}</span>
-                    <button class="qty-btn" onclick="updateQty(${index}, 1)">+</button>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <button class="btn btn-sm btn-outline-dark" onclick="updateQty(${index}, -1)">-</button>
+                        <span>${item.qty}</span>
+                        <button class="btn btn-sm btn-outline-dark" onclick="updateQty(${index}, 1)">+</button>
+                    </div>
                 </td>
                 <td>₹${item.price * item.qty}</td>
-                <td><button onclick="removeFromCart(${index})" style="color:red;border:none;background:none;cursor:pointer"><i class="fas fa-trash"></i></button></td>
+                <td><button onclick="removeFromCart(${index})" style="color:#999;border:none;background:none;cursor:pointer"><i class="fas fa-times"></i></button></td>
             </tr>
         `;
     }).join('');
     
     totalEl.innerText = `₹${total}`;
-    const displayTotal = document.getElementById('display-total-amount');
-    if(displayTotal) displayTotal.innerText = `Total: ₹${total}`;
+    if(subTotalEl) subTotalEl.innerText = `₹${total}`;
 }
 
 function updateQty(index, change) {
@@ -551,17 +554,14 @@ function updateQty(index, change) {
 }
 
 async function removeFromCart(index) {
-    const confirmed = await showRoyalConfirm("Remove this item from your bag?");
-    if(confirmed) {
-        cart.splice(index, 1);
-        saveCart();
-        initCartPage();
-        showRoyalToast("Removed", "Item removed from bag.");
-    }
+    cart.splice(index, 1);
+    saveCart();
+    initCartPage();
+    showRoyalToast("Removed", "Item removed from bag.");
 }
 
 window.openCheckout = () => {
-    if(cart.length === 0) return showRoyalAlert('Empty Cart', "Please add items to your cart first.");
+    if(cart.length === 0) return showRoyalAlert('Cart Empty', "Please add items to your cart first.");
     document.getElementById('checkout-modal').classList.add('open');
 }
 
@@ -597,7 +597,7 @@ window.submitOrder = async (e) => {
 
     if (error) {
         showRoyalAlert("Order Failed", error.message, 'error');
-        submitBtn.innerText = "Place Order";
+        submitBtn.innerText = "Complete Order";
         submitBtn.disabled = false;
         return;
     }
@@ -609,22 +609,22 @@ window.submitOrder = async (e) => {
     saveCart();
     initCartPage();
     
-    submitBtn.innerText = "Place Order";
+    submitBtn.innerText = "Complete Order";
     submitBtn.disabled = false;
 }
 
 function initAdmin() {
-    loadAdminProducts();
     loadAdminOrders();
+    loadAdminProducts();
 
-    const tabs = document.querySelectorAll('.admin-tab-btn');
+    const tabs = document.querySelectorAll('.tab-btn');
     const sections = document.querySelectorAll('.admin-section');
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
             tabs.forEach(t => t.classList.remove('active'));
-            sections.forEach(s => s.classList.remove('active'));
+            sections.forEach(s => s.style.display = 'none');
             tab.classList.add('active');
-            document.getElementById(tab.dataset.target).classList.add('active');
+            document.getElementById(tab.dataset.target).style.display = 'block';
         });
     });
 
@@ -691,38 +691,82 @@ async function loadAdminProducts() {
     if(tbody && products) {
         tbody.innerHTML = products.map(p => `
             <tr>
-                <td>${p.id}</td>
-                <td>${p.name}</td>
-                <td>${p.category}</td>
+                <td style="display:flex; align-items:center; gap:10px;">
+                    <img src="${p.image_url}" style="width:40px; height:40px; object-fit:cover; border-radius:4px;">
+                    <div>${p.name}</div>
+                </td>
                 <td>₹${p.price}</td>
-                <td>Qty: ${p.stock_quantity}</td>
+                <td>${p.stock_quantity}</td>
                 <td>
-                    <button class="btn btn-sm btn-primary" onclick="editProduct(${p.id})">Edit</button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id})">Del</button>
+                    <button class="btn btn-sm btn-outline-dark" onclick="editProduct(${p.id})">Edit</button>
+                    <button class="btn btn-sm btn-outline-dark" style="color:red; border-color:red" onclick="deleteProduct(${p.id})">Del</button>
                 </td>
             </tr>
         `).join('');
     }
 }
+
 async function loadAdminOrders() {
+    const grid = document.getElementById('admin-orders-grid');
+    if(!grid) return;
+
+    grid.innerHTML = '<p class="text-center">Loading orders...</p>';
+
     const { data: orders } = await sb.from('orders').select('*').order('created_at', { ascending: false });
-    const tbody = document.getElementById('admin-orders-body');
-    if(tbody && orders) {
-        tbody.innerHTML = orders.map(o => `
-            <tr>
-                <td>#${o.id}</td>
-                <td>${new Date(o.created_at).toLocaleDateString()}</td>
-                <td>${o.customer_name}</td>
-                <td>₹${o.total_amount}</td>
-                <td>${o.status}</td>
-                <td><button class="btn btn-sm btn-outline" style="color:black;border-color:#ccc" onclick="viewOrderItems(${o.id})">Items</button></td>
-            </tr>
-        `).join('');
+    
+    if(!orders || orders.length === 0) {
+        grid.innerHTML = '<p class="text-center">No orders found.</p>';
+        return;
     }
+
+    const { data: allItems } = await sb.from('order_items').select('*');
+
+    grid.innerHTML = orders.map(o => {
+        const items = allItems.filter(i => i.order_id === o.id);
+        const statusClass = o.status === 'Pending' ? 'status-pending' : 'status-paid';
+        
+        const itemsHtml = items.map(i => `
+            <div class="order-item-row">
+                <span>${i.product_name} x ${i.quantity}</span>
+                <span style="font-weight:600">₹${i.subtotal}</span>
+            </div>
+        `).join('');
+
+        return `
+        <div class="order-card">
+            <div class="order-header">
+                <span class="order-id">ORDER #${o.id}</span>
+                <span class="order-date">${new Date(o.created_at).toLocaleString()}</span>
+            </div>
+            <div class="order-body">
+                <div class="order-info">
+                    <h5>Customer Details</h5>
+                    <p><strong>${o.customer_name}</strong></p>
+                    <p style="color:#666; font-size:0.9rem;">${o.customer_email}</p>
+                    <h5 style="margin-top:15px;">Shipping Address</h5>
+                    <p style="color:#666; font-size:0.9rem;">${o.address}</p>
+                    <h5 style="margin-top:15px;">Payment</h5>
+                    <p>${o.payment_method}</p>
+                </div>
+                <div class="order-items-list">
+                    <h5 style="margin-bottom:15px;">Order Items</h5>
+                    ${itemsHtml}
+                    <div class="order-total-row">
+                        <span>Total Amount:</span>
+                        <span style="font-size:1.2rem; font-weight:700;">₹${o.total_amount}</span>
+                    </div>
+                     <div style="text-align:right; margin-top:10px;">
+                        <span class="status-badge ${statusClass}">${o.status}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        `;
+    }).join('');
 }
 
 window.deleteProduct = async (id) => {
-    const yes = await showRoyalConfirm('Delete this product?');
+    const yes = await showRoyalConfirm('Permanently delete this product?');
     if(yes) { 
         await sb.from('products').delete().eq('id', id); 
         loadAdminProducts(); 
@@ -740,16 +784,7 @@ window.editProduct = async (id) => {
         document.getElementById('prod-stock').value = p.stock_quantity;
         document.getElementById('prod-image-url').value = p.image_url;
         document.getElementById('prod-desc').value = p.description || '';
-        document.querySelector('.admin-tabs button[data-target="products-section"]').click();
+        document.querySelector('.tab-btn[data-target="products-section"]').click();
         window.scrollTo(0,0);
     }
-}
-
-window.viewOrderItems = async (orderId) => {
-    const { data: items } = await sb.from('order_items').select('*').eq('order_id', orderId);
-    let msg = ``;
-    items.forEach(i => {
-        msg += `${i.product_name} x ${i.quantity} = ₹${i.subtotal}\n`;
-    });
-    showRoyalAlert(`Order #${orderId} Items`, msg, 'info');
 }

@@ -11,72 +11,75 @@
 </head>
 <body>
     <header class="site-header">
-        <div class="header-main container">
+        <div class="header-main">
             <div class="brand-logo"><a href="index.html"><h1>Royal Collections</h1></a></div>
-            <div class="header-icons"><a href="cart.html" class="cart-icon"><i class="fas fa-shopping-bag"></i><span class="cart-count">0</span></a></div>
+            <nav class="main-navigation">
+                <ul class="nav-list">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="ladies.html">Ladies</a></li>
+                    <li><a href="kids.html">Kids</a></li>
+                    <li><a href="shoes.html">Shoes</a></li>
+                    <li><a href="cosmetics.html">Jewelry</a></li>
+                    <li><a href="accessories.html">Accessories</a></li>
+                </ul>
+            </nav>
+            <div class="header-icons">
+                <a href="cart.html" class="cart-icon"><i class="fas fa-shopping-bag"></i><span class="cart-count">0</span></a>
+            </div>
         </div>
-        <nav class="main-navigation">
-            <ul class="nav-list">
-                <li><a href="index.html">Home</a></li>
-                <li><a href="ladies.html">Ladies Couture</a></li>
-                <li><a href="kids.html">Little Royals</a></li>
-                <li><a href="shoes.html">Shoes</a></li>
-                <li><a href="cosmetics.html">Cosmetic Ornaments</a></li>
-                <li><a href="accessories.html">Accessories</a></li>
-            </ul>
-        </nav>
     </header>
 
-    <section class="container" style="padding: 40px 20px;">
-        <div style="margin-bottom: 30px; color: grey; font-size: 0.9rem;">
-            <a href="index.html">Home</a> / <span id="breadcrumb-category">Collection</span> / <span id="breadcrumb-name" style="color:var(--text-black)">Product</span>
+    <section class="container" style="padding-top: 40px;">
+        <div class="breadcrumb">
+            <a href="index.html">Home</a> <span>/</span> 
+            <a href="#" id="breadcrumb-category">Collection</a> <span>/</span> 
+            <span id="breadcrumb-name" style="color:var(--color-primary)">Product</span>
         </div>
 
-        <div class="product-detail-container">
-            <div class="detail-image">
+        <div class="product-layout">
+            <div class="product-gallery">
                 <img id="detail-img" src="" alt="Product Image">
             </div>
 
-            <div class="detail-info">
-                <div class="category-tag" id="detail-cat-tag">Category</div>
-                <h2 id="detail-title">Loading...</h2>
-                <div id="detail-price" style="font-size: 2rem; color: var(--primary-blue); font-weight: 700; margin-bottom: 20px;"></div>
-                
-                <p id="detail-desc" style="color: var(--text-grey); margin-bottom: 30px; line-height: 1.8;">
-                    Loading product details...
-                </p>
+            <div class="product-info-col">
+                <div style="text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; color: var(--color-secondary); margin-bottom: 5px;" id="detail-cat-tag"></div>
+                <h1 id="detail-title">Loading...</h1>
+                <div class="price-tag" id="detail-price"></div>
+                <span id="stock-indicator" class="stock-status"></span>
 
-                <div id="stock-indicator" style="margin-bottom: 20px; font-weight: 600;"></div>
+                <div class="desc-text" id="detail-desc"></div>
 
-                <div style="background: #f9f9f9; padding: 20px; border-radius: 8px;">
-                    <div class="form-group" style="max-width: 100%;">
-                        <label style="font-weight: 600; font-size: 0.8rem; text-transform: uppercase; margin-bottom:8px; display:block;">Size</label>
-                        <select id="detail-size" class="form-control">
-                            <option value="S">Small (S)</option>
-                            <option value="M" selected>Medium (M)</option>
-                            <option value="L">Large (L)</option>
-                            <option value="XL">Extra Large (XL)</option>
+                <div style="background: white; border: 1px solid #eee; padding: 25px; border-radius: 8px;">
+                    <div class="control-group">
+                        <label class="control-label">Size</label>
+                        <select id="detail-size" class="select-input">
+                            <option value="S">Small</option>
+                            <option value="M" selected>Medium</option>
+                            <option value="L">Large</option>
+                            <option value="XL">Extra Large</option>
                         </select>
                     </div>
 
-                    <div class="form-group" style="max-width: 100px;">
-                        <label style="font-weight: 600; font-size: 0.8rem; text-transform: uppercase; margin-bottom:8px; display:block;">Quantity</label>
-                        <input type="number" id="detail-qty" class="form-control" value="1" min="1">
+                    <div class="control-group">
+                        <label class="control-label">Quantity</label>
+                        <input type="number" id="detail-qty" class="qty-input" value="1" min="1">
                     </div>
 
-                    <button id="add-to-cart-btn" class="btn btn-primary" style="width: 100%; margin-top: 10px;">Add to Bag</button>
+                    <button id="add-to-cart-btn" class="btn btn-primary" style="width: 100%;">Add to Bag</button>
                 </div>
                 
-                <div style="margin-top: 30px; font-size: 0.85rem; color: #666; display: grid; gap: 10px;">
-                    <div><i class="fas fa-truck" style="width: 20px;"></i> Free Shipping on orders over ₹2500</div>
-                    <div><i class="fas fa-undo" style="width: 20px;"></i> 30-Day Easy Returns</div>
-                    <div><i class="fas fa-shield-alt" style="width: 20px;"></i> Secure Payment</div>
+                <div class="meta-features">
+                    <div class="meta-item"><i class="fas fa-truck"></i> Free Delivery over ₹2500</div>
+                    <div class="meta-item"><i class="fas fa-undo"></i> 30-Day Returns Policy</div>
+                    <div class="meta-item"><i class="fas fa-shield-alt"></i> Secure Payment Processing</div>
                 </div>
             </div>
         </div>
     </section>
 
-    <footer class="site-footer"><div class="container text-center"><p>&copy; 2025 Royal Collections.</p></div></footer>
+    <footer style="padding: 40px 0; border-top: 1px solid #eee; text-align: center;">
+        <p style="color: var(--color-secondary); font-size: 0.9rem;">&copy; 2025 Royal Collections.</p>
+    </footer>
     <script src="script.js"></script>
 </body>
 </html>

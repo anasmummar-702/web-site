@@ -5,110 +5,96 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard | Royal Collections</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        body { background-image: radial-gradient(#e5e5e5 1px, transparent 1px); background-size: 20px 20px; }
-    </style>
+    <style>body { background-color: #f4f6f8; }</style>
 </head>
 <body>
-    <header class="site-header">
-        <div class="header-main container">
+    <header style="background: #fff; border-bottom: 1px solid #ddd; padding: 20px 40px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto;">
             <div class="brand-logo"><a href="index.html"><h1>Royal Admin</h1></a></div>
-            <div><a href="index.html" class="btn btn-outline-dark">Back to Site</a></div>
+            <a href="index.html" class="btn btn-outline-dark btn-sm">Back to Store</a>
         </div>
     </header>
 
-    <section class="container" style="padding: 40px 20px;">
-        
-        <div class="admin-tabs">
-            <button class="admin-tab-btn active" data-target="products-section">Manage Products</button>
-            <button class="admin-tab-btn" data-target="orders-section">View Orders</button>
-        </div>
-
-        <div id="products-section" class="admin-section active">
-            <form id="product-form" class="admin-form" style="background: white; border: 1px solid #ddd;">
-                <h3 style="margin-bottom: 20px; font-family: var(--font-heading);">Product Details</h3>
-                <input type="hidden" id="prod-id">
-                <div class="form-group">
-                    <label>Product Name</label>
-                    <input type="text" id="prod-name" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label>Category</label>
-                    <select id="prod-category" class="form-control" required>
-                        <option value="ladies">Ladies Couture</option>
-                        <option value="kids">Little Royals</option>
-                        <option value="shoes">Shoes</option>
-                        <option value="cosmetics">Cosmetics</option>
-                        <option value="accessories">Accessories</option>
-                    </select>
-                </div>
-                <div style="display:flex; gap:20px;">
-                    <div class="form-group" style="flex:1">
-                        <label>Price (₹)</label>
-                        <input type="number" id="prod-price" class="form-control" required>
-                    </div>
-                    <div class="form-group" style="flex:1">
-                        <label>Stock Qty</label>
-                        <input type="number" id="prod-stock" class="form-control" required value="10">
-                    </div>
-                </div>
-                
-                <div class="form-group" style="background: #f9f9f9; padding: 15px; border: 1px solid #eee;">
-                    <label style="margin-bottom: 10px; display:block;">Product Image</label>
-                    
-                    <label style="font-size: 0.8rem; color: #666;">Option 1: Direct Upload</label>
-                    <input type="file" id="prod-image-file" class="form-control" accept="image/*" style="margin-bottom: 10px;">
-                    
-                    <div style="text-align: center; font-size: 0.8rem; color: #999; margin: 5px 0;">- OR -</div>
-                    
-                    <label style="font-size: 0.8rem; color: #666;">Option 2: Image URL</label>
-                    <input type="text" id="prod-image-url" class="form-control" placeholder="https://...">
-                </div>
-
-                <div class="form-group">
-                    <label>Description</label>
-                    <textarea id="prod-desc" class="form-control" rows="3"></textarea>
-                </div>
-                <button type="submit" id="save-product-btn" class="btn btn-primary">Save Product</button>
-            </form>
-
-            <div class="admin-table-container" style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
-                <table class="cart-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Category</th>
-                            <th>Price</th>
-                            <th>Stock</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="admin-products-body"></tbody>
-                </table>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h2>Dashboard</h2>
+            <div class="tab-nav">
+                <button class="tab-btn active" data-target="orders-section">Orders</button>
+                <button class="tab-btn" data-target="products-section">Products</button>
             </div>
         </div>
 
-        <div id="orders-section" class="admin-section">
-            <div class="admin-table-container" style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
-                <table class="cart-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Date</th>
-                            <th>Customer</th>
-                            <th>Total</th>
-                            <th>Status</th>
-                            <th>Details</th>
-                        </tr>
-                    </thead>
-                    <tbody id="admin-orders-body"></tbody>
-                </table>
+        <div id="orders-section" class="admin-section active">
+            <div id="admin-orders-grid" class="admin-card-grid">
+                <p class="text-center" style="grid-column: 1/-1;">Loading orders...</p>
             </div>
         </div>
-    </section>
+
+        <div id="products-section" class="admin-section" style="display: none;">
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 40px;">
+                <div class="form-layout">
+                    <h3 style="margin-bottom: 20px; font-family: var(--font-heading);">Add / Edit Product</h3>
+                    <form id="product-form">
+                        <input type="hidden" id="prod-id">
+                        <div class="control-group">
+                            <label class="control-label">Product Name</label>
+                            <input type="text" id="prod-name" class="select-input" required>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label">Category</label>
+                            <select id="prod-category" class="select-input" required>
+                                <option value="ladies">Ladies Couture</option>
+                                <option value="kids">Little Royals</option>
+                                <option value="shoes">Shoes</option>
+                                <option value="cosmetics">Jewelry</option>
+                                <option value="accessories">Accessories</option>
+                            </select>
+                        </div>
+                        <div style="display:flex; gap:20px;">
+                            <div class="control-group" style="flex:1">
+                                <label class="control-label">Price (₹)</label>
+                                <input type="number" id="prod-price" class="select-input" required>
+                            </div>
+                            <div class="control-group" style="flex:1">
+                                <label class="control-label">Stock</label>
+                                <input type="number" id="prod-stock" class="select-input" required value="10">
+                            </div>
+                        </div>
+                        
+                        <div class="control-group" style="background: #f9f9f9; padding: 15px; border-radius: 4px;">
+                            <label class="control-label">Product Image</label>
+                            <input type="file" id="prod-image-file" class="select-input" accept="image/*" style="margin-bottom: 10px;">
+                            <div style="text-align: center; font-size: 0.7rem; color: #999; margin: 5px 0;">- OR -</div>
+                            <input type="text" id="prod-image-url" class="select-input" placeholder="Image URL">
+                        </div>
+
+                        <div class="control-group">
+                            <label class="control-label">Description</label>
+                            <textarea id="prod-desc" class="select-input" rows="3"></textarea>
+                        </div>
+                        <button type="submit" id="save-product-btn" class="btn btn-primary" style="width: 100%;">Save Product</button>
+                    </form>
+                </div>
+
+                <div style="background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                    <table class="modern-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Price</th>
+                                <th>Stock</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-products-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>
