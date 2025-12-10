@@ -137,7 +137,7 @@ input, select, textarea { font-family: inherit; }
     align-items: center;
     font-weight: 600;
 }
-.mobile-menu-toggle { display: none; font-size: 1.4rem; cursor: pointer; color: var(--color-primary); }
+.mobile-menu-toggle { display: none; font-size: 1.4rem; cursor: pointer; color: var(--color-primary); padding: 10px; margin-left: -10px; }
 
 .page-hero {
     height: 40vh;
@@ -341,18 +341,27 @@ input, select, textarea { font-family: inherit; }
     
     .brand-logo h1 { font-size: 1.5rem; }
     .mobile-menu-toggle { display: block; }
+    
+    /* MODIFIED MOBILE MENU: Right Sidebar, 50% width */
     .main-navigation { 
-        display: none; 
-        position: absolute; 
-        top: 100%; 
-        left: 0; 
-        width: 100%; 
+        display: block; /* Required for transition to work, unlike 'none' */
+        position: fixed; 
+        top: 0; 
+        right: -55%; /* Start off-screen (slightly more than width to be safe) */
+        width: 50%; /* Requested: half of the screen */
+        height: 100vh;
         background: #fff; 
-        padding: 20px; 
-        border-bottom: 1px solid var(--color-border); 
-        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-        flex-direction: column;
+        padding: 60px 20px 20px 20px; 
+        border-left: 1px solid var(--color-border); 
+        box-shadow: -5px 0 20px rgba(0,0,0,0.1);
+        transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 2000;
+        overflow-y: auto;
     }
+    .main-navigation.open {
+        right: 0;
+    }
+
     .nav-list { flex-direction: column; width: 100%; gap: 15px; }
     .nav-list a { display: block; width: 100%; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
     
@@ -383,14 +392,13 @@ input, select, textarea { font-family: inherit; }
     .qv-grid { grid-template-columns: 1fr; gap: 20px; }
     .modal-content { padding: 20px; }
 
-    /* --- MOBILE TABLE CARDS TRANSFORMATION --- */
     .modern-table, .modern-table tbody, .modern-table tr, .modern-table td {
         display: block;
         width: 100%;
     }
     
     .modern-table thead {
-        display: none; /* Hide standard headers */
+        display: none; 
     }
     
     .modern-table tr {
@@ -421,14 +429,12 @@ input, select, textarea { font-family: inherit; }
         letter-spacing: 0.5px;
     }
 
-    /* Product & Cart Card specific layout overrides */
-    /* Make the first cell (Image/Title) look like a header */
     .modern-table td:first-child {
         border-bottom: 1px solid #f0f0f0;
         padding-bottom: 15px;
         margin-bottom: 10px;
         text-align: left;
-        display: block; /* Stack image and text */
+        display: block; 
         width: 100%;
     }
     
@@ -438,21 +444,16 @@ input, select, textarea { font-family: inherit; }
         text-align: left;
     }
 
-    /* Actions row at bottom */
     .modern-table td:last-child {
         border-top: 1px solid #f0f0f0;
         padding-top: 15px;
         margin-top: 10px;
-        justify-content: flex-end; /* Align buttons to right */
+        justify-content: flex-end; 
     }
 
-    /* Hide empty labels if explicit structure is used */
     .modern-table td[data-label=""]::before { display: none; }
-    
-    /* Ensure inputs in tables don't overflow */
     .modern-table input[type="number"] { max-width: 60px; }
     
-    /* Variant list specific spacing */
     .modern-table td[data-label="Variants"] {
         display: block;
         text-align: left;

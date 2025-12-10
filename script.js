@@ -14,63 +14,59 @@ let cart = JSON.parse(localStorage.getItem('royal_cart')) || [];
 let currentProducts = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
-    if (!sb) {
-        document.body.innerHTML = '<div style="padding:50px;text-align:center;"><h1>System Error</h1><p>Database connection missing.</p></div>';
-        return;
+    
+    // --- UI SETUP (Run this FIRST so the menu works immediately) ---
+    const mobileToggle = document.querySelector('.mobile-menu-toggle');
+    const nav = document.querySelector('.main-navigation');
+
+    if (mobileToggle && nav) {
+        mobileToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            nav.classList.toggle('open');
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (nav.classList.contains('open') && !nav.contains(e.target) && !mobileToggle.contains(e.target)) {
+                nav.classList.remove('open');
+            }
+        });
     }
 
     injectQuickViewModal();
     injectStockAlertModal(); 
     injectCustomAlertSystem();
+    updateCartCount(); // Update badge immediately from local storage
 
-    await validateCartStock(); 
-    updateCartCount();
-    
+    // --- DB CHECKS (Run this SECOND) ---
+    if (!sb) {
+        // If DB fails, we still allow the UI to load, just show an error toast if needed
+        console.error("Database connection missing");
+    } else {
+        // Perform network checks without blocking the UI
+        validateCartStock(); 
+    }
+
+    // --- PAGE SPECIFIC INIT ---
     const path = window.location.pathname;
-    
-    if (path.includes('admin.html')) {
+
+    if (path.includes('admin')) {
         initAdmin();
-    } else if (path.includes('product.html')) {
+    } else if (path.includes('product')) {
         initProductDetail();
-    } else if (path.includes('cart.html')) {
+    } else if (path.includes('cart')) {
         initCartPage();
-    } else if (path.includes('index.html') || path === '/' || path.endsWith('/')) {
+    } else if (path.includes('index') || path === '/' || path.endsWith('/')) {
         initHomePage();
     } else {
         initListingPage();
     }
-
-    const mobileToggle = document.querySelector('.mobile-menu-toggle');
-    const nav = document.querySelector('.main-navigation');
-    if(mobileToggle) {
-        mobileToggle.addEventListener('click', () => {
-            nav.style.display = nav.style.display === 'flex' ? 'none' : 'flex';
-        });
-    }
 });
 
+// ... [Rest of the functions remain the same] ...
+
 function injectCustomAlertSystem() {
-    const html = `
-    <div id="royal-alert" class="modal-overlay">
-        <div class="modal-content" style="text-align:center; max-width:400px;">
-            <i id="royal-alert-icon" class="fas fa-exclamation-circle" style="font-size:3rem; margin-bottom:15px; display:block;"></i>
-            <h3 id="royal-alert-title" style="margin-bottom:10px;">Notice</h3>
-            <p id="royal-alert-msg" style="color:#666; margin-bottom:20px;"></p>
-            <button class="btn btn-primary" onclick="closeRoyalAlert()">Okay</button>
-        </div>
-    </div>
-    <div id="royal-confirm" class="modal-overlay">
-        <div class="modal-content" style="text-align:center; max-width:400px;">
-            <i class="fas fa-question-circle" style="font-size:3rem; color:var(--color-accent); margin-bottom:15px; display:block;"></i>
-            <h3 style="margin-bottom:10px;">Are you sure?</h3>
-            <p id="royal-confirm-msg" style="color:#666; margin-bottom:20px;"></p>
-            <div style="display:flex; gap:10px; justify-content:center;">
-                <button id="btn-confirm-no" class="btn btn-outline-dark">Cancel</button>
-                <button id="btn-confirm-yes" class="btn btn-primary">Yes, Proceed</button>
-            </div>
-        </div>
-    </div>
-    `;
+    const html = `<div id="royal-alert" class="modal-overlay"> <div class="modal-content" style="text-align:center; max-width:400px;"> <i id="royal-alert-icon" class="fas fa-exclamation-circle" style="font-size:3rem; margin-bottom:15px; display:block;"></i> <h3 id="royal-alert-title" style="margin-bottom:10px;">Notice</h3> <p id="royal-alert-msg" style="color:#666; margin-bottom:20px;"></p> <button class="btn btn-primary" onclick="closeRoyalAlert()">Okay</button> </div> </div> <div id="royal-confirm" class="modal-overlay"> <div class="modal-content" style="text-align:center; max-width:400px;"> <i class="fas fa-question-circle" style="font-size:3rem; color:var(--color-accent); margin-bottom:15px; display:block;"></i> <h3 style="margin-bottom:10px;">Are you sure?</h3> <p id="royal-confirm-msg" style="color:#666; margin-bottom:20px;"></p> <div style="display:flex; gap:10px; justify-content:center;"> <button id="btn-confirm-no" class="btn btn-outline-dark">Cancel</button> <button id="btn-confirm-yes" class="btn btn-primary">Yes, Proceed</button> </div> </div> </div>`;
     document.body.insertAdjacentHTML('beforeend', html);
 }
 
@@ -85,7 +81,7 @@ function showRoyalAlert(title, message, type = 'warning') {
     if(type === 'error') { icon.classList.add('fa-times-circle'); icon.style.color = 'var(--color-error)'; }
     else if(type === 'success') { icon.classList.add('fa-check-circle'); icon.style.color = 'var(--color-success)'; }
     else { icon.classList.add('fa-exclamation-circle'); icon.style.color = '#f39c12'; }
-
+    
     overlay.classList.add('open');
 }
 
@@ -98,20 +94,20 @@ function showRoyalConfirm(message) {
         const overlay = document.getElementById('royal-confirm');
         document.getElementById('royal-confirm-msg').innerText = message;
         overlay.classList.add('open');
-
+        
         const btnYes = document.getElementById('btn-confirm-yes');
         const btnNo = document.getElementById('btn-confirm-no');
-
+    
         const newBtnYes = btnYes.cloneNode(true);
         const newBtnNo = btnNo.cloneNode(true);
         btnYes.parentNode.replaceChild(newBtnYes, btnYes);
         btnNo.parentNode.replaceChild(newBtnNo, btnNo);
-
+    
         newBtnYes.addEventListener('click', () => {
             overlay.classList.remove('open');
             resolve(true);
         });
-
+    
         newBtnNo.addEventListener('click', () => {
             overlay.classList.remove('open');
             resolve(false);
@@ -122,7 +118,7 @@ function showRoyalConfirm(message) {
 function showRoyalToast(title, message, isError = false) {
     let toast = document.querySelector('.cart-toast');
     if (toast) toast.remove();
-
+    
     toast = document.createElement('div');
     toast.className = `cart-toast ${isError ? 'error' : ''}`;
     toast.innerHTML = `
@@ -143,25 +139,25 @@ function showRoyalToast(title, message, isError = false) {
 
 function restrictInputToStock(inputElement, productId, totalStock, size) {
     const inCartQty = cart
-        .filter(item => item.id === productId && item.size === size)
-        .reduce((sum, item) => sum + item.qty, 0);
-
+    .filter(item => item.id === productId && item.size === size)
+    .reduce((sum, item) => sum + item.qty, 0);
+    
     const remainingAllowed = Math.max(0, totalStock - inCartQty);
-
+    
     inputElement.max = remainingAllowed;
     inputElement.min = 1;
     inputElement.value = remainingAllowed > 0 ? 1 : 0;
-
+    
     if (remainingAllowed === 0) {
         inputElement.disabled = true;
     } else {
         inputElement.disabled = false;
     }
-
+    
     inputElement.oninput = function() {
         let val = parseInt(this.value);
         if (isNaN(val)) return;
-
+    
         if (val > remainingAllowed) {
             this.value = remainingAllowed;
             showRoyalToast('Limit Reached', `Only ${remainingAllowed} available in ${size}.`, true);
@@ -169,70 +165,31 @@ function restrictInputToStock(inputElement, productId, totalStock, size) {
             this.value = 1;
         }
     };
-
+    
     return remainingAllowed;
 }
 
 function injectQuickViewModal() {
-    const modalHTML = `
-    <div class="modal-overlay" id="quick-view-modal">
-        <div class="modal-content" style="max-width:800px;">
-            <span class="close-modal" onclick="closeQuickView()">&times;</span>
-            <div class="qv-grid">
-                <div class="qv-img-wrap">
-                    <img id="qv-img" src="" alt="Product">
-                </div>
-                <div style="display:flex; flex-direction:column; justify-content:center;">
-                    <h3 id="qv-title" style="font-family:var(--font-heading); font-size:1.8rem; line-height:1.2; margin-bottom:10px;"></h3>
-                    <div id="qv-price" style="font-size:1.4rem; color:var(--color-accent); font-weight:600; margin-bottom:15px;"></div>
-                    <p id="qv-stock" style="margin-bottom:20px; font-size:0.9rem; font-weight:600;"></p>
-                    <div class="control-group">
-                        <label class="control-label">Size</label>
-                        <select id="qv-size" class="select-input">
-                            <option value="S">Small</option>
-                            <option value="M" selected>Medium</option>
-                            <option value="L">Large</option>
-                            <option value="XL">Extra Large</option>
-                        </select>
-                    </div>
-                    <div class="control-group">
-                        <label class="control-label">Quantity</label>
-                        <input type="number" id="qv-qty" class="qty-input" value="1" min="1">
-                    </div>
-                    <button id="qv-add-btn" class="btn btn-primary" style="width:100%">Add to Bag</button>
-                    <a id="qv-link" href="#" style="display:block; text-align:center; margin-top:15px; font-size:0.8rem; text-decoration:underline; color:#666;">View Full Details</a>
-                </div>
-            </div>
-        </div>
-    </div>`;
+    const modalHTML = `<div class="modal-overlay" id="quick-view-modal"> <div class="modal-content" style="max-width:800px;"> <span class="close-modal" onclick="closeQuickView()">&times;</span> <div class="qv-grid"> <div class="qv-img-wrap"> <img id="qv-img" src="" alt="Product"> </div> <div style="display:flex; flex-direction:column; justify-content:center;"> <h3 id="qv-title" style="font-family:var(--font-heading); font-size:1.8rem; line-height:1.2; margin-bottom:10px;"></h3> <div id="qv-price" style="font-size:1.4rem; color:var(--color-accent); font-weight:600; margin-bottom:15px;"></div> <p id="qv-stock" style="margin-bottom:20px; font-size:0.9rem; font-weight:600;"></p> <div class="control-group"> <label class="control-label">Size</label> <select id="qv-size" class="select-input"> <option value="S">Small</option> <option value="M" selected>Medium</option> <option value="L">Large</option> <option value="XL">Extra Large</option> </select> </div> <div class="control-group"> <label class="control-label">Quantity</label> <input type="number" id="qv-qty" class="qty-input" value="1" min="1"> </div> <button id="qv-add-btn" class="btn btn-primary" style="width:100%">Add to Bag</button> <a id="qv-link" href="#" style="display:block; text-align:center; margin-top:15px; font-size:0.8rem; text-decoration:underline; color:#666;">View Full Details</a> </div> </div> </div> </div>`;
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 }
 
 function injectStockAlertModal() {
-    const alertHTML = `
-    <div class="modal-overlay" id="stock-alert-modal">
-        <div class="modal-content" style="max-width:400px; text-align:center;">
-            <span class="close-modal" onclick="document.getElementById('stock-alert-modal').classList.remove('open')">&times;</span>
-            <h3 style="margin-bottom:15px; font-family:var(--font-heading);">Cart Update</h3>
-            <p style="margin-bottom:15px;">Availability for some items in your cart has changed:</p>
-            <ul id="stock-alert-list" style="text-align:left; background:#fff3cd; padding:15px; border-radius:4px; font-size:0.9rem; list-style:inside;"></ul>
-            <button class="btn btn-primary" onclick="document.getElementById('stock-alert-modal').classList.remove('open')" style="margin-top:20px; width:100%;">Understood</button>
-        </div>
-    </div>`;
+    const alertHTML = `<div class="modal-overlay" id="stock-alert-modal"> <div class="modal-content" style="max-width:400px; text-align:center;"> <span class="close-modal" onclick="document.getElementById('stock-alert-modal').classList.remove('open')">&times;</span> <h3 style="margin-bottom:15px; font-family:var(--font-heading);">Cart Update</h3> <p style="margin-bottom:15px;">Availability for some items in your cart has changed:</p> <ul id="stock-alert-list" style="text-align:left; background:#fff3cd; padding:15px; border-radius:4px; font-size:0.9rem; list-style:inside;"></ul> <button class="btn btn-primary" onclick="document.getElementById('stock-alert-modal').classList.remove('open')" style="margin-top:20px; width:100%;">Understood</button> </div> </div>`;
     document.body.insertAdjacentHTML('beforeend', alertHTML);
 }
 
 async function validateCartStock() {
     if (cart.length === 0) return;
-
+    
     const ids = [...new Set(cart.map(item => item.id))];
     const { data: dbProducts } = await sb.from('products').select('*').in('id', ids);
-
+    
     if (!dbProducts) return;
-
+    
     let changes = [];
     let cartUpdated = false;
-
+    
     dbProducts.forEach(dbItem => {
         const sizesInCart = [...new Set(cart.filter(c => c.id === dbItem.id).map(c => c.size))];
         
@@ -245,9 +202,9 @@ async function validateCartStock() {
             } else if (!dbItem.variants) {
                 variantStock = Math.floor(dbItem.stock_quantity / 4); 
             }
-
+    
             let totalReserved = cartItemsForVariant.reduce((sum, c) => sum + c.qty, 0);
-
+    
             if (totalReserved > variantStock) {
                 let available = variantStock;
                 for (let i = cartItemsForVariant.length - 1; i >= 0; i--) {
@@ -274,7 +231,7 @@ async function validateCartStock() {
             }
         });
     });
-
+    
     cart.forEach(item => {
         if (!dbProducts.find(p => p.id === item.id)) {
             changes.push(`"<strong>${item.name}</strong>" is no longer available.`);
@@ -282,7 +239,7 @@ async function validateCartStock() {
             cartUpdated = true;
         }
     });
-
+    
     if (cartUpdated) {
         cart = cart.filter(item => item.qty > 0);
         saveCart();
@@ -297,12 +254,12 @@ async function validateCartStock() {
 async function initHomePage() {
     const container = document.getElementById('home-products-grid');
     if (!container) return;
-
+    
     const { data: products } = await sb.from('products')
         .select('*')
         .order('id', {ascending: false})
         .limit(8);
-
+    
     if (products && products.length > 0) {
         renderProducts(products, container);
     } else {
@@ -313,20 +270,20 @@ async function initHomePage() {
 async function initListingPage() {
     const container = document.querySelector('.product-grid');
     if (!container) return;
-
+    
     let category = null;
     if (window.location.pathname.includes('ladies')) category = 'ladies';
     else if (window.location.pathname.includes('kids')) category = 'kids';
     else if (window.location.pathname.includes('shoes')) category = 'shoes';
     else if (window.location.pathname.includes('cosmetics')) category = 'cosmetics';
-    else if (window.location.pathname.includes('accessories')) category = 'accessories';
-
+    else if (window.location.pathname.includes('innerwears')) category = 'innerwears';
+    
     if (category) {
         const { data: products } = await sb.from('products')
             .select('*')
             .eq('category', category)
             .order('id', {ascending: false}); 
-
+    
         if (products && products.length > 0) {
             renderProducts(products, container);
         } else {
@@ -343,14 +300,14 @@ function renderProducts(products, container) {
         let totalStock = p.stock_quantity;
         let minPrice = p.price;
         let maxPrice = p.price;
-
+    
         if(p.variants) {
             totalStock = Object.values(p.variants).reduce((sum, v) => sum + Number(v.stock), 0);
             const prices = Object.values(p.variants).map(v => Number(v.price));
             minPrice = Math.min(...prices);
             maxPrice = Math.max(...prices);
         }
-
+    
         const isOutOfStock = totalStock <= 0;
         const badge = isOutOfStock ? '<div class="product-badge" style="background:var(--color-error);color:#fff;">Sold Out</div>' : '';
         
@@ -358,7 +315,7 @@ function renderProducts(products, container) {
         if (minPrice !== maxPrice) {
             priceDisplay = `From ₹${minPrice}`;
         }
-
+    
         const card = document.createElement('div');
         card.className = 'product-card';
         card.innerHTML = `
@@ -384,7 +341,7 @@ window.openQuickView = (id) => {
     const product = currentProducts.find(p => p.id === id);
     if (!product) return;
     currentQuickViewProduct = product;
-
+    
     document.getElementById('qv-img').src = product.image_url;
     document.getElementById('qv-title').innerText = product.name;
     document.getElementById('qv-link').href = `product.html?id=${product.id}`;
@@ -392,30 +349,30 @@ window.openQuickView = (id) => {
     const sizeSelect = document.getElementById('qv-size');
     const qtyInput = document.getElementById('qv-qty');
     const btn = document.getElementById('qv-add-btn');
-
+    
     sizeSelect.value = 'M';
-
+    
     function updateQuickViewUI() {
         const size = sizeSelect.value;
         let variantStock = 0;
         let variantPrice = product.price;
-
+    
         if (product.variants && product.variants[size]) {
             variantStock = product.variants[size].stock;
             variantPrice = product.variants[size].price;
         } else {
             variantStock = Math.floor(product.stock_quantity / 4); 
         }
-
+    
         document.getElementById('qv-price').innerText = `₹${variantPrice}`;
         const stockEl = document.getElementById('qv-stock');
-
+    
         if (variantStock > 0) {
             stockEl.innerText = `In Stock (${variantStock} available)`;
             stockEl.style.color = 'var(--color-success)';
             
             const remaining = restrictInputToStock(qtyInput, product.id, variantStock, size);
-
+    
             if(remaining > 0) {
                 btn.disabled = false;
                 btn.innerText = "Add to Bag";
@@ -438,10 +395,10 @@ window.openQuickView = (id) => {
             qtyInput.value = 0;
         }
     }
-
+    
     sizeSelect.onchange = updateQuickViewUI;
     updateQuickViewUI(); 
-
+    
     document.getElementById('quick-view-modal').classList.add('open');
 }
 
@@ -453,7 +410,7 @@ async function initProductDetail() {
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
     if(!id) return;
-
+    
     const { data: product } = await sb.from('products').select('*').eq('id', id).single();
     
     if(product) {
@@ -469,27 +426,27 @@ async function initProductDetail() {
         const btn = document.getElementById('add-to-cart-btn');
         const priceEl = document.getElementById('detail-price');
         const stockEl = document.getElementById('stock-indicator');
-
+    
         function updateDetailUI() {
             const size = sizeSelect.value;
             let variantStock = 0;
             let variantPrice = product.price;
-
+    
             if (product.variants && product.variants[size]) {
                 variantStock = parseInt(product.variants[size].stock);
                 variantPrice = parseInt(product.variants[size].price);
             } else {
                 variantStock = Math.floor(product.stock_quantity / 4);
             }
-
+    
             priceEl.innerText = `₹${variantPrice}`;
-
+    
             if (variantStock > 0) {
                 stockEl.innerText = `In Stock (${variantStock} units)`;
                 stockEl.className = 'stock-status in';
                 
                 const remaining = restrictInputToStock(qtyInput, product.id, variantStock, size);
-
+    
                 if (remaining > 0) {
                     btn.disabled = false;
                     btn.innerText = "Add to Bag";
@@ -517,7 +474,7 @@ async function initProductDetail() {
                 qtyInput.value = 0;
             }
         }
-
+    
         sizeSelect.addEventListener('change', updateDetailUI);
         updateDetailUI();
     }
@@ -534,7 +491,7 @@ function addToCart(id, name, price, img, maxStock, qty = 1, size = 'M') {
         showRoyalAlert('Stock Limitation', `Sorry, only ${maxStock} units available for size ${size}.`, 'error');
         return;
     }
-
+    
     const existing = cart.find(item => item.cartItemId === cartItemId);
     
     if (existing) {
@@ -577,11 +534,10 @@ function initCartPage() {
         if(subTotalEl) subTotalEl.innerText = '₹0';
         return;
     }
-
+    
     let total = 0;
     container.innerHTML = cart.map((item, index) => {
         total += item.price * item.qty;
-        // Added data-labels for mobile responsive CSS
         return `
             <tr>
                 <td>
@@ -624,7 +580,7 @@ function updateQty(index, change) {
             return;
         }
     }
-
+    
     const newQty = item.qty + change;
     if (newQty > 0) {
         item.qty = newQty;
@@ -651,7 +607,7 @@ window.closeCheckout = () => {
 
 window.submitOrder = async (e) => {
     e.preventDefault();
-    
+
     const name = document.getElementById('cust-name').value;
     const email = document.getElementById('cust-email').value;
     const address = document.getElementById('cust-address').value;
@@ -664,31 +620,65 @@ window.submitOrder = async (e) => {
 
     if (!sb) return showRoyalAlert("System Error", "Database not connected", 'error');
 
-    const { data, error } = await sb.rpc('process_order', {
-        order_details: {
+    // 1. Create Order
+    const { data: orderData, error: orderError } = await sb
+        .from('orders')
+        .insert([{
             customer_name: name,
             customer_email: email,
             address: address,
             total_amount: total,
-            payment_method: payment
-        },
-        cart_items: cart
-    });
+            payment_method: payment,
+            status: 'Pending'
+        }])
+        .select()
+        .single();
 
-    if (error) {
-        showRoyalAlert("Order Failed", error.message, 'error');
+    if (orderError) {
+        showRoyalAlert("Order Failed", orderError.message, 'error');
         submitBtn.innerText = "Complete Order";
         submitBtn.disabled = false;
         return;
     }
 
+    const orderId = orderData.id;
+
+    // 2. Process Items
+    for (const item of cart) {
+        await sb.from('order_items').insert([{
+            order_id: orderId,
+            product_id: item.id,
+            product_name: item.name, 
+            quantity: item.qty,
+            price: item.price,
+            subtotal: item.price * item.qty
+        }]);
+
+        // Update Stock
+        const { data: product } = await sb.from('products').select('*').eq('id', item.id).single();
+        if (product) {
+            let updatePayload = {};
+            if (product.variants && product.variants[item.size]) {
+                let currentStock = parseInt(product.variants[item.size].stock);
+                product.variants[item.size].stock = Math.max(0, currentStock - item.qty);
+                const totalStock = Object.values(product.variants).reduce((sum, v) => sum + Number(v.stock), 0);
+                updatePayload = { variants: product.variants, stock_quantity: totalStock };
+            } else {
+                updatePayload = { stock_quantity: Math.max(0, product.stock_quantity - item.qty) };
+            }
+            if (Object.keys(updatePayload).length > 0) {
+                await sb.from('products').update(updatePayload).eq('id', item.id);
+            }
+        }
+    }
+
     closeCheckout();
-    showRoyalAlert("Order Success", `Thank you! Your Order ID is #${data.order_id}`, 'success');
-    
+    showRoyalAlert("Order Success", `Thank you! Your Order ID is #${orderId}`, 'success');
+
     cart = [];
     saveCart();
     initCartPage();
-    
+
     submitBtn.innerText = "Complete Order";
     submitBtn.disabled = false;
 }
@@ -786,16 +776,12 @@ async function loadAdminProducts() {
             let variantStr = '';
             if (p.variants) {
                 for (const [size, details] of Object.entries(p.variants)) {
-                    variantStr += `<div style="font-size:0.85rem; margin-bottom:4px; display:flex; justify-content:space-between; width:100%; max-width:200px;">
-                        <span><span style="font-weight:600;">${size}</span>: ₹${details.price}</span>
-                        <span style="color:#666; margin-left:10px;">Stock: ${details.stock}</span>
-                    </div>`;
+                    variantStr += `<div style="font-size:0.85rem; margin-bottom:4px; display:flex; justify-content:space-between; width:100%; max-width:200px;"> <span><span style="font-weight:600;">${size}</span>: ₹${details.price}</span> <span style="color:#666; margin-left:10px;">Stock: ${details.stock}</span> </div>`;
                 }
             } else {
                 variantStr = `<div style="color:#666; font-style:italic;">Legacy: ₹${p.price} (${p.stock_quantity})</div>`;
             }
-
-            // Added data-labels for mobile cards
+    
             return `
             <tr>
                 <td>
@@ -821,9 +807,9 @@ async function loadAdminProducts() {
 async function loadAdminOrders() {
     const grid = document.getElementById('admin-orders-grid');
     if(!grid) return;
-
+    
     grid.innerHTML = '<p class="text-center">Loading orders...</p>';
-
+    
     const { data: allProducts } = await sb.from('products').select('name, image_url');
     const productImgMap = {};
     if (allProducts) {
@@ -831,23 +817,22 @@ async function loadAdminOrders() {
             productImgMap[p.name] = p.image_url;
         });
     }
-
+    
     const { data: orders } = await sb.from('orders').select('*').order('created_at', { ascending: false });
     
     if(!orders || orders.length === 0) {
         grid.innerHTML = '<p class="text-center">No orders found.</p>';
         return;
     }
-
+    
     const { data: allItems } = await sb.from('order_items').select('*');
-
+    
     grid.innerHTML = orders.map(o => {
         const items = allItems.filter(i => i.order_id === o.id);
         const statusClass = o.status === 'Pending' ? 'status-pending' : 'status-paid';
         
         const itemsHtml = items.map(i => {
             let imgUrl = 'https://via.placeholder.com/40';
-            
             if (productImgMap[i.product_name]) {
                 imgUrl = productImgMap[i.product_name];
             } else {
@@ -856,7 +841,7 @@ async function loadAdminOrders() {
                     imgUrl = productImgMap[baseName];
                 }
             }
-
+    
             return `
             <div class="order-item-row">
                 <img src="${imgUrl}" class="order-item-img">
@@ -865,7 +850,7 @@ async function loadAdminOrders() {
             </div>
             `;
         }).join('');
-
+    
         return `
         <div class="order-card">
             <div class="order-header">
@@ -901,9 +886,9 @@ async function loadAdminOrders() {
 
 window.deleteProduct = async (id) => {
     const yes = await showRoyalConfirm('Permanently delete this product?');
-    if(yes) { 
-        await sb.from('products').delete().eq('id', id); 
-        loadAdminProducts(); 
+    if(yes) {
+        await sb.from('products').delete().eq('id', id);
+        loadAdminProducts();
         showRoyalToast("Deleted", "Product removed.");
     }
 }
@@ -916,7 +901,7 @@ window.editProduct = async (id) => {
         document.getElementById('prod-category').value = p.category;
         document.getElementById('prod-image-url').value = p.image_url;
         document.getElementById('prod-desc').value = p.description || '';
-        
+    
         if(p.variants) {
             ['S', 'M', 'L', 'XL'].forEach(size => {
                 if(p.variants[size]) {
@@ -930,7 +915,7 @@ window.editProduct = async (id) => {
                 document.getElementById(`stock-${size}`).value = Math.floor(p.stock_quantity/4);
             });
         }
-
+    
         document.querySelector('.tab-btn[data-target="products-section"]').click();
         window.scrollTo(0,0);
     }
