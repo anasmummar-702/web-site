@@ -174,8 +174,8 @@ input, select, textarea { font-family: inherit; }
 }
 
 .page-hero {
-    height: 40vh;
-    min-height: 300px;
+    height: 60vh; /* Increased height to accommodate image */
+    min-height: 500px;
     background-size: cover;
     background-position: center;
     position: relative;
@@ -187,7 +187,7 @@ input, select, textarea { font-family: inherit; }
     background-image: url('https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070&auto=format&fit=crop');
     height: 80vh;
 }
-.page-hero::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.3); }
+.page-hero::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.4); } /* Darkened slightly for text contrast */
 .page-hero-content {
     position: relative;
     z-index: 2;
@@ -195,14 +195,34 @@ input, select, textarea { font-family: inherit; }
     color: white;
     max-width: 800px;
     padding: 0 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 .page-hero-content h2 {
     font-family: var(--font-heading);
     font-size: 3rem;
     margin-bottom: 15px;
     line-height: 1.1;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
 }
-.page-hero-content p { font-size: 1.1rem; font-weight: 300; letter-spacing: 1px; }
+.page-hero-content p { 
+    font-size: 1.1rem; 
+    font-weight: 300; 
+    letter-spacing: 1px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+
+/* RECTANGULAR HERO IMAGE */
+.hero-inset-img {
+    width: 300px;
+    height: 200px;
+    object-fit: cover;
+    margin-top: 30px;
+    border: 3px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+    border-radius: 4px; /* Slight rounded corners for elegance, not round */
+}
 
 .collection-header { padding: 60px 0 40px; text-align: center; }
 .collection-header h3 { font-family: var(--font-heading); font-size: 2rem; }
@@ -381,28 +401,28 @@ input, select, textarea { font-family: inherit; }
         display: block; 
         position: fixed; 
         top: 0; 
-        left: -55%; /* Start off-screen LEFT */
+        left: -55%; 
         right: auto;
-        width: 50%; /* 50% width as requested */
+        width: 50%; 
         height: 100vh;
         background: #fff; 
         padding: 60px 20px 20px 20px; 
-        border-right: 1px solid var(--color-border); /* Border on right now */
+        border-right: 1px solid var(--color-border);
         border-left: none;
-        box-shadow: 5px 0 20px rgba(0,0,0,0.1); /* Shadow to the right */
+        box-shadow: 5px 0 20px rgba(0,0,0,0.1); 
         transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         z-index: 2000;
         overflow-y: auto;
     }
     .main-navigation.open {
-        left: 0; /* Slide to left: 0 */
+        left: 0; 
         right: auto;
     }
 
     .nav-list { flex-direction: column; width: 100%; gap: 15px; }
     .nav-list a { display: block; width: 100%; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
     
-    .page-hero { height: 35vh; min-height: 250px; }
+    .page-hero { height: 50vh; min-height: 450px; }
     .home-hero { height: 65vh; min-height: 400px; }
     .page-hero-content h2 { font-size: 2rem; }
     
