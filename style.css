@@ -139,42 +139,8 @@ input, select, textarea { font-family: inherit; }
 }
 .mobile-menu-toggle { display: none; font-size: 1.4rem; cursor: pointer; color: var(--color-primary); margin-right: 15px; }
 
-/* ADVERTISEMENT SLIDER STYLES */
-.ad-slider-container {
-    width: 100%;
-    height: 180px; 
-    overflow: hidden;
-    position: relative;
-    background-color: #f0f0f0;
-    border-bottom: 1px solid #e2e2e2;
-}
-
-.ad-slider-track {
-    display: flex;
-    width: calc(250px * 12); 
-    animation: scroll 20s linear infinite;
-}
-
-.ad-slide {
-    width: 250px;
-    height: 180px;
-    flex-shrink: 0;
-    padding-right: 2px;
-}
-
-.ad-slide img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-@keyframes scroll {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(calc(-250px * 6)); }
-}
-
 .page-hero {
-    height: 60vh; /* Increased height to accommodate image */
+    height: 60vh;
     min-height: 500px;
     background-size: cover;
     background-position: center;
@@ -187,7 +153,7 @@ input, select, textarea { font-family: inherit; }
     background-image: url('https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070&auto=format&fit=crop');
     height: 80vh;
 }
-.page-hero::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.4); } /* Darkened slightly for text contrast */
+.page-hero::after { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.4); }
 .page-hero-content {
     position: relative;
     z-index: 2;
@@ -211,17 +177,6 @@ input, select, textarea { font-family: inherit; }
     font-weight: 300; 
     letter-spacing: 1px;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-}
-
-/* RECTANGULAR HERO IMAGE */
-.hero-inset-img {
-    width: 300px;
-    height: 200px;
-    object-fit: cover;
-    margin-top: 30px;
-    border: 3px solid rgba(255, 255, 255, 0.9);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-    border-radius: 4px; /* Slight rounded corners for elegance, not round */
 }
 
 .collection-header { padding: 60px 0 40px; text-align: center; }
@@ -389,14 +344,11 @@ input, select, textarea { font-family: inherit; }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-/* ================= MOBILE RESPONSIVE ================= */
 @media(max-width: 768px) {
     .container, .admin-container, .admin-main-header-content, .header-main { padding: 15px 20px; }
-    
     .brand-logo h1 { font-size: 1.5rem; }
     .mobile-menu-toggle { display: block; }
     
-    /* MODIFIED MOBILE MENU: Left Sidebar, 50% width */
     .main-navigation { 
         display: block; 
         position: fixed; 
@@ -414,10 +366,7 @@ input, select, textarea { font-family: inherit; }
         z-index: 2000;
         overflow-y: auto;
     }
-    .main-navigation.open {
-        left: 0; 
-        right: auto;
-    }
+    .main-navigation.open { left: 0; right: auto; }
 
     .nav-list { flex-direction: column; width: 100%; gap: 15px; }
     .nav-list a { display: block; width: 100%; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
@@ -449,76 +398,18 @@ input, select, textarea { font-family: inherit; }
     .qv-grid { grid-template-columns: 1fr; gap: 20px; }
     .modal-content { padding: 20px; }
 
-    .modern-table, .modern-table tbody, .modern-table tr, .modern-table td {
-        display: block;
-        width: 100%;
-    }
-    
-    .modern-table thead {
-        display: none; 
-    }
-    
-    .modern-table tr {
-        margin-bottom: 20px;
-        background: #fff;
-        border: 1px solid var(--color-border);
-        border-radius: 8px;
-        padding: 15px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-    }
-    
-    .modern-table td {
-        padding: 8px 0;
-        border: none;
-        text-align: right;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 0.9rem;
-    }
-    
-    .modern-table td[data-label]::before {
-        content: attr(data-label);
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        color: var(--color-secondary);
-        letter-spacing: 0.5px;
-    }
-
-    .modern-table td:first-child {
-        border-bottom: 1px solid #f0f0f0;
-        padding-bottom: 15px;
-        margin-bottom: 10px;
-        text-align: left;
-        display: block; 
-        width: 100%;
-    }
-    
-    .modern-table td:first-child .cart-item-flex,
-    .modern-table td:first-child > div {
-        justify-content: flex-start;
-        text-align: left;
-    }
-
-    .modern-table td:last-child {
-        border-top: 1px solid #f0f0f0;
-        padding-top: 15px;
-        margin-top: 10px;
-        justify-content: flex-end; 
-    }
-
+    .modern-table, .modern-table tbody, .modern-table tr, .modern-table td { display: block; width: 100%; }
+    .modern-table thead { display: none; }
+    .modern-table tr { margin-bottom: 20px; background: #fff; border: 1px solid var(--color-border); border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+    .modern-table td { padding: 8px 0; border: none; text-align: right; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; }
+    .modern-table td[data-label]::before { content: attr(data-label); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; color: var(--color-secondary); letter-spacing: 0.5px; }
+    .modern-table td:first-child { border-bottom: 1px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 10px; text-align: left; display: block; width: 100%; }
+    .modern-table td:first-child .cart-item-flex, .modern-table td:first-child > div { justify-content: flex-start; text-align: left; }
+    .modern-table td:last-child { border-top: 1px solid #f0f0f0; padding-top: 15px; margin-top: 10px; justify-content: flex-end; }
     .modern-table td[data-label=""]::before { display: none; }
     .modern-table input[type="number"] { max-width: 60px; }
-    
-    .modern-table td[data-label="Variants"] {
-        display: block;
-        text-align: left;
-    }
-    .modern-table td[data-label="Variants"]::before {
-        display: block;
-        margin-bottom: 8px;
-    }
+    .modern-table td[data-label="Variants"] { display: block; text-align: left; }
+    .modern-table td[data-label="Variants"]::before { display: block; margin-bottom: 8px; }
 }
 
 @media(max-width: 480px) {
