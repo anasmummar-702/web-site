@@ -137,7 +137,41 @@ input, select, textarea { font-family: inherit; }
     align-items: center;
     font-weight: 600;
 }
-.mobile-menu-toggle { display: none; font-size: 1.4rem; cursor: pointer; color: var(--color-primary); padding: 10px; margin-left: -10px; }
+.mobile-menu-toggle { display: none; font-size: 1.4rem; cursor: pointer; color: var(--color-primary); margin-right: 15px; }
+
+/* ADVERTISEMENT SLIDER STYLES */
+.ad-slider-container {
+    width: 100%;
+    height: 180px; 
+    overflow: hidden;
+    position: relative;
+    background-color: #f0f0f0;
+    border-bottom: 1px solid #e2e2e2;
+}
+
+.ad-slider-track {
+    display: flex;
+    width: calc(250px * 12); 
+    animation: scroll 20s linear infinite;
+}
+
+.ad-slide {
+    width: 250px;
+    height: 180px;
+    flex-shrink: 0;
+    padding-right: 2px;
+}
+
+.ad-slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+@keyframes scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(calc(-250px * 6)); }
+}
 
 .page-hero {
     height: 40vh;
@@ -342,24 +376,27 @@ input, select, textarea { font-family: inherit; }
     .brand-logo h1 { font-size: 1.5rem; }
     .mobile-menu-toggle { display: block; }
     
-    /* MODIFIED MOBILE MENU: Right Sidebar, 50% width */
+    /* MODIFIED MOBILE MENU: Left Sidebar, 50% width */
     .main-navigation { 
-        display: block; /* Required for transition to work, unlike 'none' */
+        display: block; 
         position: fixed; 
         top: 0; 
-        right: -55%; /* Start off-screen (slightly more than width to be safe) */
-        width: 50%; /* Requested: half of the screen */
+        left: -55%; /* Start off-screen LEFT */
+        right: auto;
+        width: 50%; /* 50% width as requested */
         height: 100vh;
         background: #fff; 
         padding: 60px 20px 20px 20px; 
-        border-left: 1px solid var(--color-border); 
-        box-shadow: -5px 0 20px rgba(0,0,0,0.1);
-        transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-right: 1px solid var(--color-border); /* Border on right now */
+        border-left: none;
+        box-shadow: 5px 0 20px rgba(0,0,0,0.1); /* Shadow to the right */
+        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         z-index: 2000;
         overflow-y: auto;
     }
     .main-navigation.open {
-        right: 0;
+        left: 0; /* Slide to left: 0 */
+        right: auto;
     }
 
     .nav-list { flex-direction: column; width: 100%; gap: 15px; }
