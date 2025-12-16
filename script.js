@@ -13,6 +13,16 @@ if (typeof supabase !== 'undefined') {
 let cart = JSON.parse(localStorage.getItem('royal_cart')) || [];
 let currentProducts = [];
 
+// Country codes for the phone number selector
+const countryCodes = [
+    { code: "+91", country: "India", flag: "🇮🇳" },
+    { code: "+1", country: "USA", flag: "🇺🇸" },
+    { code: "+44", country: "UK", flag: "🇬🇧" },
+    { code: "+61", country: "Australia", flag: "🇦🇺" },
+    { code: "+49", country: "Germany", flag: "🇩🇪" }
+];
+
+
 document.addEventListener('DOMContentLoaded', async () => {
     
     // --- UI SETUP (Run this FIRST so the menu works immediately) ---
@@ -56,6 +66,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         initProductDetail();
     } else if (path.includes('cart')) {
         initCartPage();
+        initCheckoutFormLogic(); // Custom logic for the checkout form
     } else if (path.includes('index') || path === '/' || path.endsWith('/')) {
         initHomePage();
     } else {
@@ -63,7 +74,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// ... [Rest of the functions remain the same] ...
+// New function for checkout form specific logic
+function initCheckoutFormLogic() {
+    // 1. Post Code Validation
+    const postCodeInput = document.getElementById('cust-postcode');
+    if (postCodeInput) {
+        postCodeInput.addEventListener('input', function() {
+            // Remove non-digit characters
+            this.value = this.value.replace(/[^0-9]/g, ''); 
+            
+            // Restrict to 6 digits
+            if (this.value.length > 6) {
+                this.value = this.value.slice(0, 6);
+                showRoyalToast("Input Limit", "Post code allows only 6 digits.", true);
+            }
+        });
+    }
+
+    // 2. Country Code Slicer/Selector
+    const select = document.getElementById('country-code-select');
+    if (select) {
+        // Populate the dropdown with flags and codes
+        select.innerHTML = countryCodes.map(c => 
+            `<option value="${c.code}" data-flag="${c.flag}">${c.flag} ${c.code}</option>`
+        ).join('');
+        
+        // Set default value
+        select.value = '+91'; 
+    }
+}
+
 
 function injectCustomAlertSystem() {
     const html = `<div id="royal-alert" class="modal-overlay"> <div class="modal-content" style="text-align:center; max-width:400px;"> <i id="royal-alert-icon" class="fas fa-exclamation-circle" style="font-size:3rem; margin-bottom:15px; display:block;"></i> <h3 id="royal-alert-title" style="margin-bottom:10px;">Notice</h3> <p id="royal-alert-msg" style="color:#666; margin-bottom:20px;"></p> <button class="btn btn-primary" onclick="closeRoyalAlert()">Okay</button> </div> </div> <div id="royal-confirm" class="modal-overlay"> <div class="modal-content" style="text-align:center; max-width:400px;"> <i class="fas fa-question-circle" style="font-size:3rem; color:var(--color-accent); margin-bottom:15px; display:block;"></i> <h3 style="margin-bottom:10px;">Are you sure?</h3> <p id="royal-confirm-msg" style="color:#666; margin-bottom:20px;"></p> <div style="display:flex; gap:10px; justify-content:center;"> <button id="btn-confirm-no" class="btn btn-outline-dark">Cancel</button> <button id="btn-confirm-yes" class="btn btn-primary">Yes, Proceed</button> </div> </div> </div>`;
@@ -610,7 +650,10 @@ window.submitOrder = async (e) => {
 
     const name = document.getElementById('cust-name').value;
     const email = document.getElementById('cust-email').value;
+    const phoneCode = document.getElementById('country-code-select').value; // New
+    const phoneNum = document.getElementById('cust-phone').value; // New
     const address = document.getElementById('cust-address').value;
+    const postCode = document.getElementById('cust-postcode').value; // New
     const total = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
     const payment = document.getElementById('payment-method').value;
 
@@ -626,7 +669,9 @@ window.submitOrder = async (e) => {
         .insert([{
             customer_name: name,
             customer_email: email,
+            customer_phone: `${phoneCode} ${phoneNum}`, // New
             address: address,
+            post_code: postCode, // New
             total_amount: total,
             payment_method: payment,
             status: 'Pending'
@@ -862,8 +907,10 @@ async function loadAdminOrders() {
                     <h5>Customer Details</h5>
                     <p><strong>${o.customer_name}</strong></p>
                     <p style="color:#666; font-size:0.9rem;">${o.customer_email}</p>
+                    <p style="color:#666; font-size:0.9rem;">Phone: ${o.customer_phone || 'N/A'}</p>
                     <h5 style="margin-top:15px;">Shipping Address</h5>
                     <p style="color:#666; font-size:0.9rem;">${o.address}</p>
+                    <p style="color:#666; font-size:0.9rem;">Post Code: ${o.post_code || 'N/A'}</p>
                     <h5 style="margin-top:15px;">Payment</h5>
                     <p>${o.payment_method}</p>
                 </div>

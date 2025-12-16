@@ -283,6 +283,24 @@ input, select, textarea { font-family: inherit; }
 }
 .qty-input { width: 80px; }
 
+/* --- New styles for Checkout form --- */
+.contact-input-group {
+    display: flex;
+    gap: 10px;
+}
+.contact-input-group .country-code-select {
+    flex-shrink: 0;
+    width: 110px; /* Small slicer/width */
+    font-size: 0.9rem;
+    padding-left: 10px;
+    text-align: center;
+}
+.contact-input-group input[type="tel"] {
+    flex-grow: 1;
+}
+/* --------------------------------- */
+
+
 .cart-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 40px; margin: 40px 0; }
 .cart-table-wrapper { border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; background: #fff; }
 .modern-table { width: 100%; border-collapse: collapse; }
@@ -410,6 +428,14 @@ input, select, textarea { font-family: inherit; }
     .modern-table input[type="number"] { max-width: 60px; }
     .modern-table td[data-label="Variants"] { display: block; text-align: left; }
     .modern-table td[data-label="Variants"]::before { display: block; margin-bottom: 8px; }
+
+    /* --- Mobile styles for Checkout form --- */
+    .contact-input-group {
+        flex-wrap: nowrap;
+    }
+    .contact-input-group .country-code-select {
+        width: 90px;
+    }
 }
 
 @media(max-width: 480px) {
