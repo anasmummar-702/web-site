@@ -612,11 +612,3 @@ input, select, textarea { font-family: inherit; }
         width: 120px;
     }
 }
-
-@media(max-width: 480px) {
-    .product-grid { grid-template-columns: 1fr; }
-    .product-card { display: flex; align-items: center; gap: 15px; background: #fff; padding: 10px; border: 1px solid #eee; border-radius: 8px; }
-    .product-image-wrapper { width: 100px; height: 100px; flex-shrink: 0; margin-bottom: 0; }
-    .product-details { padding-top: 0; flex-grow: 1; }
-    .product-actions { display: none; }
-}
