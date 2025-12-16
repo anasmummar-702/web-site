@@ -493,6 +493,7 @@ async function initProductDetail() {
             priceEl.innerText = `₹${variantPrice}`;
     
             if (variantStock > 0) {
+                // FIX: Use template literal for correct stock display on product page
                 stockEl.innerText = `In Stock (${variantStock} units)`;
                 stockEl.className = 'stock-status in';
                 
@@ -591,7 +592,7 @@ function initCartPage() {
         total += item.price * item.qty;
         return `
             <tr>
-                <td>
+                <td class="cart-item-product-cell">
                     <div class="cart-item-flex">
                         <img src="${item.img}" class="cart-thumb">
                         <div class="cart-item-details">
@@ -599,17 +600,43 @@ function initCartPage() {
                             <span>ID: ${item.cartItemId}</span>
                         </div>
                     </div>
+                    <!-- BEGIN MOBILE ONLY DETAILS (as per screenshot) -->
+                    <div class="cart-item-mobile-details">
+                        <div class="mobile-detail-row">
+                            <span class="detail-label">PRICE</span>
+                            <span class="detail-value">₹${item.price}</span>
+                        </div>
+                        <div class="mobile-detail-row">
+                            <span class="detail-label">QUANTITY</span>
+                            <div class="detail-value qty-controls-mobile">
+                                <button class="btn btn-sm btn-outline-dark" onclick="updateQty(${index}, -1)">-</button>
+                                <span>${item.qty}</span>
+                                <button class="btn btn-sm btn-outline-dark" onclick="updateQty(${index}, 1)">+</button>
+                            </div>
+                        </div>
+                        <div class="mobile-detail-row total-row">
+                            <span class="detail-label">TOTAL</span>
+                            <span class="detail-value" style="font-weight:600;">₹${item.price * item.qty}</span>
+                        </div>
+                        <!-- Trash icon moved to a separate row aligned right -->
+                        <div class="mobile-detail-action-row">
+                            <button onclick="removeFromCart(${index})" class="mobile-trash-btn" style="color:#e74c3c; border:none; background:none; cursor:pointer; font-size:1.1rem; padding:0;">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- END MOBILE ONLY DETAILS -->
                 </td>
-                <td data-label="Price">₹${item.price}</td>
-                <td data-label="Quantity">
+                <td data-label="Price" class="desktop-only-cell">₹${item.price}</td>
+                <td data-label="Quantity" class="desktop-only-cell">
                     <div style="display:flex; align-items:center; gap:10px;">
                         <button class="btn btn-sm btn-outline-dark" onclick="updateQty(${index}, -1)">-</button>
                         <span>${item.qty}</span>
                         <button class="btn btn-sm btn-outline-dark" onclick="updateQty(${index}, 1)">+</button>
                     </div>
                 </td>
-                <td data-label="Total" style="font-weight:600;">₹${item.price * item.qty}</td>
-                <td data-label="">
+                <td data-label="Total" class="desktop-only-cell" style="font-weight:600;">₹${item.price * item.qty}</td>
+                <td data-label="" class="desktop-only-cell trash-cell-desktop">
                     <button onclick="removeFromCart(${index})" style="color:#e74c3c; border:none; background:none; cursor:pointer; font-size:1.1rem;">
                         <i class="fas fa-trash-alt"></i>
                     </button>
