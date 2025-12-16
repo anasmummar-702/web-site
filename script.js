@@ -783,10 +783,81 @@ window.submitOrder = async (e) => {
     submitBtn.disabled = false;
 }
 
-function initAdmin() {
+// --- ADMIN AUTHENTICATION AND INIT (Client-side Password Check) ---
+const ADMIN_PASSWORD = 'royal.soman';
+const ADMIN_SESSION_KEY = 'royal_admin_logged_in'; // Simple flag in local storage
+
+function checkAdminLocalAuth() {
+    const isLoggedIn = localStorage.getItem(ADMIN_SESSION_KEY) === 'true';
+    if (isLoggedIn) {
+        showAdminDashboard();
+    } else {
+        showAdminLogin();
+    }
+}
+
+function showAdminDashboard() {
+    document.getElementById('admin-login-screen').style.display = 'none';
+    document.getElementById('admin-dashboard-content').style.display = 'block';
+    document.getElementById('admin-logout-btn').style.display = 'inline-block';
     loadAdminOrders();
     loadAdminProducts();
+}
 
+function showAdminLogin() {
+    document.getElementById('admin-login-screen').style.display = 'flex';
+    document.getElementById('admin-dashboard-content').style.display = 'none';
+    document.getElementById('admin-logout-btn').style.display = 'none';
+    document.getElementById('login-error-message').innerText = '';
+}
+
+async function handleAdminLogin(e) {
+    e.preventDefault();
+    
+    const password = document.getElementById('admin-password').value;
+    const btn = document.getElementById('admin-login-btn');
+    const errorMsgEl = document.getElementById('login-error-message');
+    
+    btn.disabled = true;
+    btn.innerText = "Checking...";
+    errorMsgEl.innerText = '';
+
+    // Hardcoded password check
+    if (password === ADMIN_PASSWORD) {
+        localStorage.setItem(ADMIN_SESSION_KEY, 'true');
+        showRoyalToast("Success", "Welcome to the Admin Dashboard!", false);
+        showAdminDashboard();
+    } else {
+        errorMsgEl.innerText = "Invalid password. Try again.";
+        showRoyalAlert("Login Failed", "Invalid password. Try again.", 'error');
+        // Clear password field for security
+        document.getElementById('admin-password').value = '';
+    }
+
+    btn.disabled = false;
+    btn.innerText = "Log In";
+}
+
+window.handleAdminLogout = async () => {
+    const confirmLogout = await showRoyalConfirm("Are you sure you want to log out?");
+    if (confirmLogout) {
+        localStorage.removeItem(ADMIN_SESSION_KEY);
+        showRoyalToast("Logged Out", "You have been securely logged out.", false);
+        showAdminLogin();
+    }
+}
+
+function initAdmin() {
+    // 1. Initial Auth Check
+    checkAdminLocalAuth();
+
+    // 2. Set up Login Form Listener
+    const loginForm = document.getElementById('admin-login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleAdminLogin);
+    }
+    
+    // 3. Set up Tab Navigation
     const tabs = document.querySelectorAll('.tab-btn');
     const sections = document.querySelectorAll('.admin-section');
     tabs.forEach(tab => {
@@ -798,6 +869,7 @@ function initAdmin() {
         });
     });
 
+    // 4. Set up Product Form Listener
     const form = document.getElementById('product-form');
     if(form) {
         form.addEventListener('submit', async (e) => {
