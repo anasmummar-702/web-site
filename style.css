@@ -283,23 +283,22 @@ input, select, textarea { font-family: inherit; }
 }
 .qty-input { width: 80px; }
 
-/* --- New styles for Checkout form --- */
+/* --- New styles for Checkout form (re-introduced) --- */
 .contact-input-group {
     display: flex;
     gap: 10px;
 }
 .contact-input-group .country-code-select {
     flex-shrink: 0;
-    width: 110px; /* Small slicer/width */
+    width: 140px; /* Small slicer/width to fit flag, code, and country name */
     font-size: 0.9rem;
     padding-left: 10px;
-    text-align: center;
+    text-align: left;
 }
-.contact-input-group input[type="tel"] {
+.contact-input-group input[type="number"] {
     flex-grow: 1;
 }
 /* --------------------------------- */
-
 
 .cart-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 40px; margin: 40px 0; }
 .cart-table-wrapper { border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; background: #fff; }
@@ -434,7 +433,7 @@ input, select, textarea { font-family: inherit; }
         flex-wrap: nowrap;
     }
     .contact-input-group .country-code-select {
-        width: 90px;
+        width: 120px;
     }
 }
 

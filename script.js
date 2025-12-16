@@ -13,14 +13,15 @@ if (typeof supabase !== 'undefined') {
 let cart = JSON.parse(localStorage.getItem('royal_cart')) || [];
 let currentProducts = [];
 
-// Country codes for the phone number selector
-const countryCodes = [
-    { code: "+91", country: "India", flag: "🇮🇳" },
-    { code: "+1", country: "USA", flag: "🇺🇸" },
-    { code: "+44", country: "UK", flag: "🇬🇧" },
-    { code: "+61", country: "Australia", flag: "🇦🇺" },
-    { code: "+49", country: "Germany", flag: "🇩🇪" }
+// Data structure for phone number validation (ONLY INDIA)
+const phoneLimits = [
+    { code: "+91", numberLength: 10, country: "India", flag: "🇮🇳" }, 
+    { code: "default", numberLength: 12, country: "Other", flag: "🌍" } 
 ];
+
+function getPhoneLimit(code) {
+    return phoneLimits.find(l => l.code === code) || phoneLimits.find(l => l.code === 'default');
+}
 
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -76,14 +77,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // New function for checkout form specific logic
 function initCheckoutFormLogic() {
-    // 1. Post Code Validation
     const postCodeInput = document.getElementById('cust-postcode');
+    const codeSelect = document.getElementById('country-code-select');
+    const numberInput = document.getElementById('cust-phone-number');
+
+    // 1. Post Code Validation 
     if (postCodeInput) {
         postCodeInput.addEventListener('input', function() {
-            // Remove non-digit characters
             this.value = this.value.replace(/[^0-9]/g, ''); 
-            
-            // Restrict to 6 digits
             if (this.value.length > 6) {
                 this.value = this.value.slice(0, 6);
                 showRoyalToast("Input Limit", "Post code allows only 6 digits.", true);
@@ -91,16 +92,26 @@ function initCheckoutFormLogic() {
         });
     }
 
-    // 2. Country Code Slicer/Selector
-    const select = document.getElementById('country-code-select');
-    if (select) {
-        // Populate the dropdown with flags and codes
-        select.innerHTML = countryCodes.map(c => 
-            `<option value="${c.code}" data-flag="${c.flag}">${c.flag} ${c.code}</option>`
-        ).join('');
+    // 2. Country Code Slicer/Selector and Number Validation (India only)
+    if (codeSelect && numberInput) {
+        const indiaLimit = getPhoneLimit('+91');
+
+        // Populate the dropdown with only the India option (Flag, Code, Country)
+        codeSelect.innerHTML = `<option value="${indiaLimit.code}">${indiaLimit.flag} ${indiaLimit.code} (${indiaLimit.country})</option>`;
         
-        // Set default value
-        select.value = '+91'; 
+        // Disable the select since only one option exists
+        codeSelect.disabled = true;
+
+        // Set the number input max length and enforce digits only
+        numberInput.maxLength = indiaLimit.numberLength;
+
+        numberInput.addEventListener('input', function() {
+            this.value = this.value.replace(/[^0-9]/g, ''); // Ensure only digits
+            if (this.value.length > indiaLimit.numberLength) {
+                this.value = this.value.slice(0, indiaLimit.numberLength);
+                showRoyalToast("Number Limit", `Phone number is limited to ${indiaLimit.numberLength} digits for India.`, true);
+            }
+        });
     }
 }
 
@@ -650,10 +661,11 @@ window.submitOrder = async (e) => {
 
     const name = document.getElementById('cust-name').value;
     const email = document.getElementById('cust-email').value;
-    const phoneCode = document.getElementById('country-code-select').value; // New
-    const phoneNum = document.getElementById('cust-phone').value; // New
+    const phoneCode = document.getElementById('country-code-select').value;
+    const phoneNumber = document.getElementById('cust-phone-number').value;
     const address = document.getElementById('cust-address').value;
-    const postCode = document.getElementById('cust-postcode').value; // New
+    const nearAddress = document.getElementById('cust-near-address').value;
+    const postCode = document.getElementById('cust-postcode').value; 
     const total = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
     const payment = document.getElementById('payment-method').value;
 
@@ -661,7 +673,21 @@ window.submitOrder = async (e) => {
     submitBtn.innerText = "Processing...";
     submitBtn.disabled = true;
 
-    if (!sb) return showRoyalAlert("System Error", "Database not connected", 'error');
+    if (!sb) {
+        submitBtn.innerText = "Complete Order";
+        submitBtn.disabled = false;
+        return showRoyalAlert("System Error", "Database not connected", 'error');
+    }
+    
+    // Final Phone number validation check
+    const limit = getPhoneLimit(phoneCode);
+    if (phoneNumber.length === 0 || phoneNumber.length !== limit.numberLength) {
+        showRoyalAlert("Validation Error", `${limit.country} phone number must be exactly ${limit.numberLength} digits.`, 'error');
+        submitBtn.innerText = "Complete Order";
+        submitBtn.disabled = false;
+        return;
+    }
+
 
     // 1. Create Order
     const { data: orderData, error: orderError } = await sb
@@ -669,9 +695,10 @@ window.submitOrder = async (e) => {
         .insert([{
             customer_name: name,
             customer_email: email,
-            customer_phone: `${phoneCode} ${phoneNum}`, // New
+            customer_phone: `${phoneCode}${phoneNumber}`, // Combined Code + Number
             address: address,
-            post_code: postCode, // New
+            near_address: nearAddress, 
+            post_code: postCode, 
             total_amount: total,
             payment_method: payment,
             status: 'Pending'
@@ -910,6 +937,7 @@ async function loadAdminOrders() {
                     <p style="color:#666; font-size:0.9rem;">Phone: ${o.customer_phone || 'N/A'}</p>
                     <h5 style="margin-top:15px;">Shipping Address</h5>
                     <p style="color:#666; font-size:0.9rem;">${o.address}</p>
+                    <p style="color:#666; font-size:0.9rem; font-style: italic;">Near: ${o.near_address || 'N/A'}</p>
                     <p style="color:#666; font-size:0.9rem;">Post Code: ${o.post_code || 'N/A'}</p>
                     <h5 style="margin-top:15px;">Payment</h5>
                     <p>${o.payment_method}</p>
