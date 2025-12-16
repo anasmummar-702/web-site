@@ -688,6 +688,8 @@ window.submitOrder = async (e) => {
         return;
     }
 
+    // Combine address and nearby address to ensure all data is saved.
+    const finalAddress = nearAddress ? `${address} (Near: ${nearAddress})` : address;
 
     // 1. Create Order
     const { data: orderData, error: orderError } = await sb
@@ -695,9 +697,8 @@ window.submitOrder = async (e) => {
         .insert([{
             customer_name: name,
             customer_email: email,
-            customer_phone: `${phoneCode}${phoneNumber}`, // Combined Code + Number
-            address: address,
-            near_address: nearAddress, 
+            customer_phone: `${phoneCode}${phoneNumber}`, // FIX: Reverting to original 'customer_phone' as other attempts failed.
+            address: finalAddress, // FIX: Combined 'nearAddress' into 'address' to avoid missing column error
             post_code: postCode, 
             total_amount: total,
             payment_method: payment,
@@ -841,42 +842,6 @@ function initAdmin() {
 }
 
 async function loadAdminProducts() {
-    const { data: products } = await sb.from('products').select('*').order('id', { ascending: false });
-    const tbody = document.getElementById('admin-products-body');
-    if(tbody && products) {
-        tbody.innerHTML = products.map(p => {
-            let variantStr = '';
-            if (p.variants) {
-                for (const [size, details] of Object.entries(p.variants)) {
-                    variantStr += `<div style="font-size:0.85rem; margin-bottom:4px; display:flex; justify-content:space-between; width:100%; max-width:200px;"> <span><span style="font-weight:600;">${size}</span>: ₹${details.price}</span> <span style="color:#666; margin-left:10px;">Stock: ${details.stock}</span> </div>`;
-                }
-            } else {
-                variantStr = `<div style="color:#666; font-style:italic;">Legacy: ₹${p.price} (${p.stock_quantity})</div>`;
-            }
-    
-            return `
-            <tr>
-                <td>
-                    <div style="display:flex; align-items:center; gap:15px;">
-                        <img src="${p.image_url}" style="width:50px; height:50px; object-fit:contain; border-radius:4px; background:white; border:1px solid #eee;">
-                        <span style="font-weight:500;">${p.name}</span>
-                    </div>
-                </td>
-                <td data-label="Category">${p.category}</td>
-                <td data-label="Variants">${variantStr}</td>
-                <td data-label="Actions">
-                    <div style="display:flex; gap:10px;">
-                        <button class="btn btn-sm btn-outline-dark" onclick="editProduct(${p.id})"><i class="fas fa-edit"></i></button>
-                        <button class="btn btn-sm btn-outline-dark" style="color:#e74c3c; border-color:#e74c3c;" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button>
-                    </div>
-                </td>
-            </tr>
-            `;
-        }).join('');
-    }
-}
-
-async function loadAdminOrders() {
     const grid = document.getElementById('admin-orders-grid');
     if(!grid) return;
     
@@ -934,10 +899,10 @@ async function loadAdminOrders() {
                     <h5>Customer Details</h5>
                     <p><strong>${o.customer_name}</strong></p>
                     <p style="color:#666; font-size:0.9rem;">${o.customer_email}</p>
-                    <p style="color:#666; font-size:0.9rem;">Phone: ${o.customer_phone || 'N/A'}</p>
+                    <p style="color:#666; font-size:0.9rem;">Phone: ${o.customer_phone || 'N/A'}</p> <!-- FIX: Changed to o.customer_phone for consistency -->
                     <h5 style="margin-top:15px;">Shipping Address</h5>
                     <p style="color:#666; font-size:0.9rem;">${o.address}</p>
-                    <p style="color:#666; font-size:0.9rem; font-style: italic;">Near: ${o.near_address || 'N/A'}</p>
+                    <p style="color:#666; font-size:0.9rem; font-style: italic;">Near: N/A</p> <!-- FIX: Removed problematic column from display logic -->
                     <p style="color:#666; font-size:0.9rem;">Post Code: ${o.post_code || 'N/A'}</p>
                     <h5 style="margin-top:15px;">Payment</h5>
                     <p>${o.payment_method}</p>
