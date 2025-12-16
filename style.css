@@ -344,6 +344,54 @@ input, select, textarea { font-family: inherit; }
 .variant-admin-grid { background: #f9f9f9; padding: 15px; border-radius: 4px; border: 1px solid var(--color-border); }
 .variant-row { display: grid; grid-template-columns: 40px 1fr 1fr; gap: 10px; align-items: center; margin-bottom: 10px; }
 
+/* ADMIN PRODUCT LIST STYLES */
+.admin-product-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.admin-product-thumb {
+    width: 40px; 
+    height: 50px;
+    object-fit: contain;
+    border-radius: 4px;
+    background: var(--color-bg-secondary);
+    border: 1px solid #f0f0f0;
+    flex-shrink: 0;
+}
+.modern-table td a {
+    font-weight: 500;
+}
+
+.admin-variant-list {
+    display: grid;
+    /* Adjusted grid to align price and stock into distinct columns for better spacing on desktop */
+    grid-template-columns: 40px 100px 1fr; 
+    gap: 5px 10px;
+    padding: 5px 0;
+}
+.admin-variant-item {
+    display: contents; 
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+.admin-variant-item .size {
+    font-weight: 600;
+    text-align: left;
+    grid-column: 1 / 2;
+}
+.admin-variant-item .price {
+    grid-column: 2 / 3; /* Price goes to the middle column */
+    color: var(--color-primary);
+}
+.admin-variant-item .stock {
+    grid-column: 3 / 4; /* Stock goes to the rightmost column */
+    text-align: left;
+    color: var(--color-secondary);
+}
+/* END ADMIN PRODUCT LIST STYLES */
+
+
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 20px; }
 .modal-overlay.open { display: flex; animation: fadeIn 0.2s ease-out; }
 .modal-content { background: #fff; padding: 30px; width: 100%; max-width: 500px; border-radius: var(--radius-md); position: relative; max-height: 90vh; overflow-y: auto; }
@@ -419,14 +467,142 @@ input, select, textarea { font-family: inherit; }
     .modern-table thead { display: none; }
     .modern-table tr { margin-bottom: 20px; background: #fff; border: 1px solid var(--color-border); border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
     .modern-table td { padding: 8px 0; border: none; text-align: right; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; }
-    .modern-table td[data-label]::before { content: attr(data-label); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; color: var(--color-secondary); letter-spacing: 0.5px; }
-    .modern-table td:first-child { border-bottom: 1px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 10px; text-align: left; display: block; width: 100%; }
-    .modern-table td:first-child .cart-item-flex, .modern-table td:first-child > div { justify-content: flex-start; text-align: left; }
-    .modern-table td:last-child { border-top: 1px solid #f0f0f0; padding-top: 15px; margin-top: 10px; justify-content: flex-end; }
-    .modern-table td[data-label=""]::before { display: none; }
+    
+    /* Card Title and Image */
+    .modern-table td:first-child { 
+        border-bottom: 1px solid #f0f0f0; 
+        padding-bottom: 15px; 
+        margin-bottom: 10px; 
+        text-align: left; 
+        display: block; 
+        width: 100%; 
+    }
+    .modern-table td:first-child .admin-product-item {
+        justify-content: flex-start;
+        font-size: 1.2rem;
+        font-weight: 600;
+        padding-right: 0;
+    }
+    .admin-product-thumb {
+        width: 60px;
+        height: 60px;
+    }
+
+    /* Category Cell */
+    .modern-table td[data-label="Category"] {
+        order: -1; /* Move Category to the top */
+        font-size: 1rem;
+        font-weight: 600;
+        text-transform: none; /* Keep natural case from DB */
+        letter-spacing: 0;
+        border-bottom: none;
+        padding-bottom: 0;
+        margin-bottom: 0;
+    }
+    .modern-table td[data-label="Category"]::before {
+        content: ""; /* Remove 'Category' label */
+    }
+
+    /* Variants Cell - The main fix for the image requested */
+    .modern-table td[data-label="Variants"] {
+        display: block;
+        padding-top: 5px;
+        border-bottom: 1px solid #f0f0f0; 
+        margin-bottom: 15px;
+        padding-bottom: 15px;
+    }
+    .modern-table td[data-label="Variants"]::before { 
+        content: "VARIANTS"; /* Use VARIANTS label */
+        display: block; 
+        margin-bottom: 8px;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        color: var(--color-secondary);
+        letter-spacing: 0.5px;
+    }
+
+    .admin-variant-list {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    .admin-variant-item {
+        display: flex;
+        /* Aligns size/price to left and stock to right */
+        justify-content: space-between; 
+        font-size: 1rem;
+        color: var(--color-primary);
+        line-height: 1.2;
+    }
+    .admin-variant-item .size {
+        order: 1;
+        text-align: left;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+    .admin-variant-item .price {
+        order: 2;
+        margin-left: 5px;
+        color: var(--color-primary);
+        font-weight: 400;
+        /* Added margin-right for the requested space */
+        margin-right: 15px; 
+    }
+    .admin-variant-item .stock {
+        order: 3;
+        margin-left: auto;
+        color: var(--color-primary);
+        font-weight: 400;
+    }
+
+    /* Action buttons in card view */
+    .modern-table td[data-label=""] {
+        order: 1; /* Move actions down */
+        justify-content: flex-end;
+        border-top: none;
+        margin-top: 0;
+        padding-top: 0;
+    }
+    .modern-table td[data-label=""]::before {
+        content: "ACTIONS";
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        color: var(--color-secondary);
+        letter-spacing: 0.5px;
+    }
+    .modern-table .action-btns button {
+        padding: 10px 15px;
+        border-radius: 0;
+        font-size: 1rem;
+    }
+    .modern-table .action-btns .btn-primary {
+        background-color: var(--color-primary);
+        color: #fff;
+    }
+    .modern-table .action-btns .btn-outline-dark {
+        background-color: #fff;
+        border-color: var(--color-error);
+        color: var(--color-error);
+        padding: 10px 12px;
+        font-size: 1rem;
+        border: 1px solid;
+    }
+    .modern-table .action-btns .btn-outline-dark:hover {
+        background-color: var(--color-error);
+        color: #fff;
+    }
+
+    /* Other Mobile Overrides */
+    .modern-table td[data-label]::before {
+        display: block;
+        text-align: left;
+    }
+    .modern-table td:last-child {
+        justify-content: flex-end;
+    }
     .modern-table input[type="number"] { max-width: 60px; }
-    .modern-table td[data-label="Variants"] { display: block; text-align: left; }
-    .modern-table td[data-label="Variants"]::before { display: block; margin-bottom: 8px; }
 
     /* --- Mobile styles for Checkout form --- */
     .contact-input-group {

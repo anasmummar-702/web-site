@@ -697,8 +697,8 @@ window.submitOrder = async (e) => {
         .insert([{
             customer_name: name,
             customer_email: email,
-            customer_phone: `${phoneCode}${phoneNumber}`, // FIX: Reverting to original 'customer_phone' as other attempts failed.
-            address: finalAddress, // FIX: Combined 'nearAddress' into 'address' to avoid missing column error
+            customer_phone: `${phoneCode}${phoneNumber}`,
+            address: finalAddress,
             post_code: postCode, 
             total_amount: total,
             payment_method: payment,
@@ -842,6 +842,81 @@ function initAdmin() {
 }
 
 async function loadAdminProducts() {
+    const tbody = document.getElementById('admin-products-body');
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center">Loading products...</td></tr>';
+
+    const { data: products } = await sb.from('products').select('*').order('id', { ascending: false });
+
+    if (!products || products.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center">No products found.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = products.map(p => {
+        let variantHtml = '';
+        let variantCount = 0;
+        
+        // Use variants object if it exists and is not empty
+        if (p.variants && Object.keys(p.variants).length > 0) {
+            variantCount = Object.keys(p.variants).length;
+            
+            // Build the variants list HTML
+            const variantsOrder = ['L', 'M', 'S', 'XL']; // Order them like in the image for aesthetics
+            
+            variantHtml = `<div class="admin-variant-list">`;
+            variantsOrder.forEach(size => {
+                const variant = p.variants[size];
+                // Check for null/undefined before accessing properties
+                if (variant && variant.price !== undefined && variant.stock !== undefined) {
+                    variantHtml += `
+                        <div class="admin-variant-item">
+                            <span class="size">${size}:</span>
+                            <span class="price">₹${variant.price}</span>
+                            <span class="stock">Stock: ${variant.stock}</span>
+                        </div>
+                    `;
+                }
+            });
+            variantHtml += `</div>`;
+        } else if (p.stock_quantity !== undefined) {
+            // Fallback for single variant/legacy products (display single price/stock)
+            variantCount = 1;
+            variantHtml = `
+                <div class="admin-variant-list">
+                    <div class="admin-variant-item">
+                        <span class="size">Default:</span>
+                        <span class="price">₹${p.price}</span>
+                        <span class="stock">Stock: ${p.stock_quantity}</span>
+                    </div>
+                </div>
+            `;
+        } else {
+            variantHtml = `${variantCount} Variants`; // Default fallback text
+        }
+
+        return `
+            <tr>
+                <td>
+                    <div class="admin-product-item">
+                        <img src="${p.image_url}" alt="${p.name}" class="admin-product-thumb">
+                        <a href="product.html?id=${p.id}" target="_blank">${p.name}</a>
+                    </div>
+                </td>
+                <td>${p.category}</td>
+                <td>${variantHtml}</td>
+                <td class="action-btns">
+                    <button class="btn btn-primary btn-sm" onclick="editProduct(${p.id})"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-outline-dark btn-sm" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+
+async function loadAdminOrders() {
     const grid = document.getElementById('admin-orders-grid');
     if(!grid) return;
     
@@ -899,10 +974,10 @@ async function loadAdminProducts() {
                     <h5>Customer Details</h5>
                     <p><strong>${o.customer_name}</strong></p>
                     <p style="color:#666; font-size:0.9rem;">${o.customer_email}</p>
-                    <p style="color:#666; font-size:0.9rem;">Phone: ${o.customer_phone || 'N/A'}</p> <!-- FIX: Changed to o.customer_phone for consistency -->
+                    <p style="color:#666; font-size:0.9rem;">Phone: ${o.customer_phone || 'N/A'}</p>
                     <h5 style="margin-top:15px;">Shipping Address</h5>
                     <p style="color:#666; font-size:0.9rem;">${o.address}</p>
-                    <p style="color:#666; font-size:0.9rem; font-style: italic;">Near: N/A</p> <!-- FIX: Removed problematic column from display logic -->
+                    <p style="color:#666; font-size:0.9rem; font-style: italic;">Near: N/A</p>
                     <p style="color:#666; font-size:0.9rem;">Post Code: ${o.post_code || 'N/A'}</p>
                     <h5 style="margin-top:15px;">Payment</h5>
                     <p>${o.payment_method}</p>
