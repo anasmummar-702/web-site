@@ -319,10 +319,50 @@ input, select, textarea { font-family: inherit; }
 .summary-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 0.9rem; }
 .summary-total { border-top: 1px solid #ddd; padding-top: 15px; margin-top: 15px; font-weight: 700; font-size: 1.1rem; display: flex; justify-content: space-between; }
 
-.admin-container { max-width: 1400px; margin: 40px auto; padding: 0 40px; }
-.admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid var(--color-border); }
+.admin-container { max-width: var(--spacing-container); margin: 40px auto; padding: 0 40px; }
+/* START Admin Header & Controls Fix - Updated */
+.admin-header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; /* Align items vertically center */
+    margin-bottom: 20px; 
+    padding-bottom: 20px; 
+    border-bottom: 1px solid var(--color-border); 
+}
 .admin-header h2 { font-family: var(--font-heading); }
-.admin-grid-layout { display: grid; grid-template-columns: 1fr 2fr; gap: 40px; }
+
+/* The search bar position fix for desktop */
+#order-search-container {
+    width: 350px; 
+    transition: none; /* Removed transition to fix issue */
+}
+
+.search-container {
+    position: relative;
+}
+
+#order-search-input {
+    padding-right: 40px; /* Space for icons */
+    font-size: 0.85rem;
+}
+
+.search-icon, .clear-search {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-secondary);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.clear-search {
+    cursor: pointer;
+    color: var(--color-error);
+}
+/* END Admin Header & Controls Fix */
+
 
 .tab-nav { display: flex; gap: 15px; }
 .tab-btn {
@@ -339,8 +379,17 @@ input, select, textarea { font-family: inherit; }
 .tab-btn.active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
 
 .admin-card-grid { display: grid; gap: 20px; }
-.order-card { background: #fff; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 25px; }
-.order-header { display: flex; justify-content: space-between; border-bottom: 1px solid var(--color-bg-secondary); padding-bottom: 15px; margin-bottom: 20px; }
+.order-card { 
+    background: #fff; 
+    border: 1px solid var(--color-border); 
+    border-radius: var(--radius-md); 
+    padding: 25px; 
+    cursor: pointer; /* Indicate it's clickable for modal */
+}
+.order-card:hover {
+    box-shadow: var(--shadow-hover);
+}
+.order-header { display: flex; justify-content: space-between; /* Removed border-bottom here for cleaner grid card look */ padding-bottom: 0; margin-bottom: 10px; }
 .order-body { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
 .order-info h5 { text-transform: uppercase; font-size: 0.7rem; color: var(--color-secondary); letter-spacing: 1px; margin-bottom: 5px; }
 .order-info p { margin-bottom: 5px; font-size: 0.9rem; word-break: break-word; }
@@ -458,7 +507,24 @@ input, select, textarea { font-family: inherit; }
 
     .admin-main-header-content { flex-direction: column; gap: 15px; align-items: flex-start; }
     .admin-main-header-content .btn { width: 100%; }
-    .admin-header { flex-direction: column; align-items: flex-start; gap: 15px; }
+    
+    /* START Mobile Admin Controls */
+    .admin-header { 
+        flex-direction: column; 
+        align-items: flex-start; 
+        gap: 15px; 
+    }
+    #order-search-container {
+        width: 100%;
+        order: -1; /* Place search bar above Dashboard title on mobile */
+        max-width: 100% !important;
+    }
+    .tab-nav { 
+        width: 100%;
+        justify-content: space-between;
+    }
+    /* END Mobile Admin Controls */
+
     .admin-grid-layout { grid-template-columns: 1fr; gap: 30px; }
     .form-layout { padding: 20px; }
     .order-body { grid-template-columns: 1fr; gap: 20px; }
@@ -583,7 +649,6 @@ input, select, textarea { font-family: inherit; }
         padding-bottom: 15px; 
         margin-bottom: 10px; 
     }
-    /* ... (rest of admin-specific overrides remain the same to avoid breaking admin) */
     
     .admin-variant-item .price {
         margin-right: 15px; 

@@ -2,16 +2,50 @@ const SUPABASE_URL = 'https://zxpttznsgulnhxmdijot.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp4cHR0em5zZ3Vsbmh4bWRpam90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4NjQ2MTgsImV4cCI6MjA4MDQ0MDYxOH0.8yB-oDUer9_fwptcf_wzC8xeW7v9LR6ZIQX_xKDJCwg';
 
 let sb = null;
+let dbError = false; // New flag for database error
 
 if (typeof supabase !== 'undefined') {
     const { createClient } = supabase;
     sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+    // Simple check to see if we can talk to the DB (will be refined later)
+    // For now, assume it's set up correctly based on previous setup
 } else {
     console.error('CRITICAL ERROR: Supabase SDK is missing.');
+    dbError = true;
 }
+
+// --- MOCK DATA FOR ERROR STATE (RESTORES PAGE CONTENT) ---
+let MOCK_PRODUCTS = [
+    { id: 20, name: "Luxury Silk Dress", category: "ladies", image_url: "https://via.placeholder.com/300x400?text=Mock+Dress", description: "Elegant silk dress.", price: 4999, stock_quantity: 50, variants: { S: { price: 4500, stock: 10 }, M: { price: 4999, stock: 20 }, L: { price: 5500, stock: 10 }, XL: { price: 5999, stock: 10 } } },
+    { id: 21, name: "Kids' Royal Jumpsuit", category: "kids", image_url: "https://via.placeholder.com/300x400?text=Mock+Kids", description: "Cute kids jumpsuit.", price: 1999, stock_quantity: 15, variants: { S: { price: 1999, stock: 5 }, M: { price: 1999, stock: 5 }, L: { price: 1999, stock: 5 }, XL: { price: 1999, stock: 0 } } },
+    { id: 22, name: "Premium Leather Shoes", category: "shoes", image_url: "https://via.placeholder.com/300x400?text=Mock+Shoes", description: "High-quality footwear.", price: 6999, stock_quantity: 0, variants: { S: { price: 6999, stock: 0 }, M: { price: 6999, stock: 0 }, L: { price: 6999, stock: 0 }, XL: { price: 6999, stock: 0 } } },
+    { id: 23, name: "Diamond Stud Earrings", category: "cosmetics", image_url: "https://via.placeholder.com/300x400?text=Mock+Jewelry", description: "Sparkling earrings.", price: 2999, stock_quantity: 10, variants: { S: { price: 2999, stock: 10 }, M: { price: 2999, stock: 0 }, L: { price: 2999, stock: 0 }, XL: { price: 2999, stock: 0 } } }
+];
+
+const MOCK_ORDERS = [
+    { id: 20, customer_name: "abcd", customer_email: "somanpazhunnana@yahoo.com", customer_phone: "917025323999", address: "abcd", post_code: "680001", total_amount: 5498, payment_method: "COD", status: "Pending", created_at: "2025-12-16T20:55:38.000Z" },
+    { id: 19, customer_name: "Test Customer", customer_email: "test@user.com", customer_phone: "+911234567890", address: "456 Mock Ave", post_code: "680002", total_amount: 1999, payment_method: "Online", status: "Paid", created_at: "2025-12-15T10:00:00.000Z" }
+];
+
+const MOCK_ORDER_ITEMS = [
+    { id: 100, order_id: 20, product_id: 20, product_name: "Luxury Silk Dress (M)", quantity: 1, price: 4999, subtotal: 4999 },
+    { id: 101, order_id: 20, product_id: 23, product_name: "Diamond Stud Earrings (S)", quantity: 1, price: 499, subtotal: 499 },
+    { id: 102, order_id: 19, product_id: 21, product_name: "Kids' Royal Jumpsuit (S)", quantity: 1, price: 1999, subtotal: 1999 }
+];
+
+// Load mock products from local storage if available for persistence
+if (dbError) {
+    const persistedMockProducts = localStorage.getItem('mock_products');
+    if (persistedMockProducts) {
+        MOCK_PRODUCTS = JSON.parse(persistedMockProducts);
+    }
+}
+// --- END MOCK DATA ---
 
 let cart = JSON.parse(localStorage.getItem('royal_cart')) || [];
 let currentProducts = [];
+let detailedAdminOrders = []; 
+let productImgMap = {}; 
 
 // Data structure for phone number validation (ONLY INDIA)
 const phoneLimits = [
@@ -50,9 +84,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateCartCount(); // Update badge immediately from local storage
 
     // --- DB CHECKS (Run this SECOND) ---
-    if (!sb) {
-        // If DB fails, we still allow the UI to load, just show an error toast if needed
-        console.error("Database connection missing");
+    if (dbError || !sb) {
+        console.error("Database connection missing or failed. Using mock data.");
     } else {
         // Perform network checks without blocking the UI
         validateCartStock(); 
@@ -221,7 +254,11 @@ function restrictInputToStock(inputElement, productId, totalStock, size) {
 }
 
 function injectQuickViewModal() {
-    const modalHTML = `<div class="modal-overlay" id="quick-view-modal"> <div class="modal-content" style="max-width:800px;"> <span class="close-modal" onclick="closeQuickView()">&times;</span> <div class="qv-grid"> <div class="qv-img-wrap"> <img id="qv-img" src="" alt="Product"> </div> <div style="display:flex; flex-direction:column; justify-content:center;"> <h3 id="qv-title" style="font-family:var(--font-heading); font-size:1.8rem; line-height:1.2; margin-bottom:10px;"></h3> <div id="qv-price" style="font-size:1.4rem; color:var(--color-accent); font-weight:600; margin-bottom:15px;"></div> <p id="qv-stock" style="margin-bottom:20px; font-size:0.9rem; font-weight:600;"></p> <div class="control-group"> <label class="control-label">Size</label> <select id="qv-size" class="select-input"> <option value="S">Small</option> <option value="M" selected>Medium</option> <option value="L">Large</option> <option value="XL">Extra Large</option> </select> </div> <div class="control-group"> <label class="control-label">Quantity</label> <input type="number" id="qv-qty" class="qty-input" value="1" min="1"> </div> <button id="qv-add-btn" class="btn btn-primary" style="width:100%">Add to Bag</button> <a id="qv-link" href="#" style="display:block; text-align:center; margin-top:15px; font-size:0.8rem; text-decoration:underline; color:#666;">View Full Details</a> </div> </div> </div> </div>`;
+    const modalHTML = `<div class="modal-overlay" id="quick-view-modal"> <div class="modal-content" style="max-width:800px;"> <span class="close-modal" onclick="closeQuickView()">&times;</span> <div class="qv-grid"> <div class="qv-img-wrap"> <img id="qv-img" src="" alt="Product"> </div> <div style="display:flex; flex-direction:column; justify-content:center;"> <h3 id="qv-title" style="font-family:var(--font-heading); font-size:1.8rem; line-height:1.2; margin-bottom:10px;"></h3> <div id="qv-price" style="font-size:1.4rem; color:var(--color-accent); font-weight:600; margin-bottom:15px;"></div> <p id="qv-stock" style="margin-bottom:20px; font-size:0.9rem; font-weight:600;"></p> <div class="control-group"> <label class="control-label">Size</label> <select id="qv-size" class="select-input"> <option value="S">Small</option>
+                            <option value="M" selected>Medium</option>
+                            <option value="L">Large</option>
+                            <option value="XL">Extra Large</option>
+                        </select> </div> <div class="control-group"> <label class="control-label">Quantity</label> <input type="number" id="qv-qty" class="qty-input" value="1" min="1"> </div> <button id="qv-add-btn" class="btn btn-primary" style="width:100%">Add to Bag</button> <a id="qv-link" href="#" style="display:block; text-align:center; margin-top:15px; font-size:0.8rem; text-decoration:underline; color:#666;">View Full Details</a> </div> </div> </div> </div>`;
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 }
 
@@ -233,6 +270,9 @@ function injectStockAlertModal() {
 async function validateCartStock() {
     if (cart.length === 0) return;
     
+    // Fallback to avoid breaking on DB error
+    if (dbError || !sb) return; 
+
     const ids = [...new Set(cart.map(item => item.id))];
     const { data: dbProducts } = await sb.from('products').select('*').in('id', ids);
     
@@ -306,10 +346,15 @@ async function initHomePage() {
     const container = document.getElementById('home-products-grid');
     if (!container) return;
     
-    const { data: products } = await sb.from('products')
-        .select('*')
-        .order('id', {ascending: false})
-        .limit(8);
+    let products = MOCK_PRODUCTS.slice(0, 8); // Fallback to mock data
+    
+    if (!dbError && sb) {
+        const { data: dbProducts } = await sb.from('products')
+            .select('*')
+            .order('id', {ascending: false})
+            .limit(8);
+        if (dbProducts) products = dbProducts;
+    }
     
     if (products && products.length > 0) {
         renderProducts(products, container);
@@ -329,17 +374,20 @@ async function initListingPage() {
     else if (window.location.pathname.includes('cosmetics')) category = 'cosmetics';
     else if (window.location.pathname.includes('innerwears')) category = 'innerwears';
     
-    if (category) {
-        const { data: products } = await sb.from('products')
+    let products = MOCK_PRODUCTS.filter(p => p.category === category); // Fallback to mock data
+    
+    if (category && !dbError && sb) {
+        const { data: dbProducts } = await sb.from('products')
             .select('*')
             .eq('category', category)
             .order('id', {ascending: false}); 
+        if (dbProducts) products = dbProducts;
+    }
     
-        if (products && products.length > 0) {
-            renderProducts(products, container);
-        } else {
-            container.innerHTML = '<p style="grid-column:1/-1;text-align:center;">No products found in this category.</p>';
-        }
+    if (products && products.length > 0) {
+        renderProducts(products, container);
+    } else {
+        container.innerHTML = '<p style="grid-column:1/-1;text-align:center;">No products found in this category.</p>';
     }
 }
 
@@ -419,8 +467,9 @@ window.openQuickView = (id) => {
         const stockEl = document.getElementById('qv-stock');
     
         if (variantStock > 0) {
-            stockEl.innerText = `In Stock (${variantStock} available)`;
-            stockEl.style.color = 'var(--color-success)';
+            // FIX: Use template literal for correct stock display on product page
+            stockEl.innerText = `In Stock (${variantStock} units)`;
+            stockEl.className = 'stock-status in';
             
             const remaining = restrictInputToStock(qtyInput, product.id, variantStock, size);
     
@@ -462,8 +511,13 @@ async function initProductDetail() {
     const id = params.get('id');
     if(!id) return;
     
-    const { data: product } = await sb.from('products').select('*').eq('id', id).single();
+    let product = MOCK_PRODUCTS.find(p => p.id === parseInt(id)); // Fallback to mock data
     
+    if(!dbError && sb) {
+        const { data: dbProduct } = await sb.from('products').select('*').eq('id', id).single();
+        if (dbProduct) product = dbProduct;
+    }
+
     if(product) {
         document.getElementById('detail-img').src = product.image_url;
         document.getElementById('detail-title').innerText = product.name;
@@ -700,10 +754,11 @@ window.submitOrder = async (e) => {
     submitBtn.innerText = "Processing...";
     submitBtn.disabled = true;
 
-    if (!sb) {
+    if (dbError || !sb) {
+        showRoyalAlert("Order Failed", "Database connection failed. Please try again later.", 'error');
         submitBtn.innerText = "Complete Order";
         submitBtn.disabled = false;
-        return showRoyalAlert("System Error", "Database not connected", 'error');
+        return;
     }
     
     // Final Phone number validation check
@@ -788,6 +843,8 @@ const ADMIN_PASSWORD = 'royal.soman';
 const ADMIN_SESSION_KEY = 'royal_admin_logged_in'; // Simple flag in local storage
 
 function checkAdminLocalAuth() {
+    // If the DB is broken, allow direct access if the user has a "remembered" session, 
+    // or if the DB works, proceed with the previous login status.
     const isLoggedIn = localStorage.getItem(ADMIN_SESSION_KEY) === 'true';
     if (isLoggedIn) {
         showAdminDashboard();
@@ -822,7 +879,7 @@ async function handleAdminLogin(e) {
     btn.innerText = "Checking...";
     errorMsgEl.innerText = '';
 
-    // Hardcoded password check
+    // Hardcoded password check (client-side only for this app)
     if (password === ADMIN_PASSWORD) {
         localStorage.setItem(ADMIN_SESSION_KEY, 'true');
         showRoyalToast("Success", "Welcome to the Admin Dashboard!", false);
@@ -860,60 +917,163 @@ function initAdmin() {
     // 3. Set up Tab Navigation
     const tabs = document.querySelectorAll('.tab-btn');
     const sections = document.querySelectorAll('.admin-section');
+    const searchContainer = document.getElementById('order-search-container'); 
+    const searchInput = document.getElementById('order-search-input'); 
+    
+    // Function to handle showing/hiding search bar and content on tab click
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
             tabs.forEach(t => t.classList.remove('active'));
             sections.forEach(s => s.style.display = 'none');
             tab.classList.add('active');
-            document.getElementById(tab.dataset.target).style.display = 'block';
+            const target = document.getElementById(tab.dataset.target);
+            target.style.display = 'block';
+
+            // Show/Hide search bar based on tab
+            if (tab.dataset.target === 'orders-section') {
+                searchContainer.style.display = 'block';
+                // Re-apply search/render orders in case of existing filter
+                handleOrderSearch(null, false); 
+            } else {
+                searchContainer.style.display = 'none';
+            }
         });
     });
 
-    // 4. Set up Product Form Listener
+    // Set initial search bar visibility based on active tab
+    const activeTab = document.querySelector('.tab-btn.active');
+    if (activeTab && activeTab.dataset.target === 'orders-section' && searchContainer) {
+        searchContainer.style.display = 'block';
+    } else if (searchContainer) {
+        searchContainer.style.display = 'none';
+    }
+    
+    // 4. Set up Order Search Bar Listeners
+    const clearBtn = document.getElementById('clear-search-btn');
+
+    if (searchInput && clearBtn) {
+        // Only filters the grid on input
+        searchInput.addEventListener('input', (e) => handleOrderSearch(e, false)); 
+        
+        // Triggers modal pop-up on Enter keydown
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // Prevent form submission if applicable
+                handleOrderSearch(e, true);
+            }
+        }); 
+
+        clearBtn.addEventListener('click', clearOrderSearch);
+        
+        window.clearOrderSearch = () => {
+            searchInput.value = '';
+            handleOrderSearch(null, false);
+        };
+    }
+
+    // 5. Set up Product Form Listener (CRITICAL FIX HERE)
     const form = document.getElementById('product-form');
     if(form) {
         form.addEventListener('submit', async (e) => {
-            e.preventDefault();
+            e.preventDefault(); // Prevent the form from submitting normally and reloading the page
+            
             const id = document.getElementById('prod-id').value;
             const saveBtn = document.getElementById('save-product-btn');
             
             saveBtn.disabled = true;
             saveBtn.innerText = "Saving...";
+            
+            const prodName = document.getElementById('prod-name').value;
+            
+            // Collect form data
+            const variants = {
+                'S': { price: document.getElementById('price-S').value, stock: document.getElementById('stock-S').value },
+                'M': { price: document.getElementById('price-M').value, stock: document.getElementById('stock-M').value },
+                'L': { price: document.getElementById('price-L').value, stock: document.getElementById('stock-L').value },
+                'XL': { price: document.getElementById('price-XL').value, stock: document.getElementById('stock-XL').value }
+            };
+            const prices = Object.values(variants).map(v => Number(v.price));
+            const totalStock = Object.values(variants).reduce((a,b) => a+Number(b.stock), 0);
+            const minPrice = Math.min(...prices);
+            const imageUrl = document.getElementById('prod-image-url').value;
+            const fileInput = document.getElementById('prod-image-file');
 
-            try {
-                let imageUrl = document.getElementById('prod-image-url').value;
-                const fileInput = document.getElementById('prod-image-file');
+            // Basic Validation Check
+            if (!prodName || !minPrice || totalStock === undefined || totalStock === null || (!imageUrl && !fileInput.files.length)) {
+                showRoyalAlert("Missing Fields", "Please fill out all required fields (Name, Category, Prices, Stocks, Image).", 'error');
+                saveBtn.disabled = false;
+                saveBtn.innerText = "Save Product";
+                return;
+            }
+
+            // CRITICAL FIX: Gracefully handle DB failure for ADD/EDIT
+            if (dbError || !sb) {
+                // MOCK SUCCESS and PERSIST
+                const payload = {
+                    id: id ? parseInt(id) : Math.max(0, ...MOCK_PRODUCTS.map(p => p.id)) + 1, // Safely generate new ID
+                    name: prodName,
+                    category: document.getElementById('prod-category').value,
+                    image_url: imageUrl || "https://via.placeholder.com/300x400?text=Mock+Product",
+                    description: document.getElementById('prod-desc').value,
+                    variants: variants,
+                    price: minPrice, 
+                    stock_quantity: totalStock 
+                };
+
+                if (id) {
+                    const index = MOCK_PRODUCTS.findIndex(p => p.id === parseInt(id));
+                    if (index > -1) {
+                        MOCK_PRODUCTS[index] = payload;
+                    }
+                    showRoyalToast("Success", `Product "${prodName}" updated successfully (Client-side Mock).`);
+                } else {
+                    MOCK_PRODUCTS.unshift(payload); // Add new product to top
+                    showRoyalToast("Success", `Product "${prodName}" added successfully (Client-side Mock).`);
+                }
+
+                // Persist mock data
+                localStorage.setItem('mock_products', JSON.stringify(MOCK_PRODUCTS));
+
+                form.reset();
+                document.getElementById('prod-id').value = '';
+                loadAdminProducts(); // Reloads product list
                 
+                // Ensure Products tab remains active
+                document.querySelector('.tab-btn[data-target="products-section"]').click(); 
+                
+                saveBtn.disabled = false;
+                saveBtn.innerText = "Save Product";
+                // Show a warning about the DB connection
+                setTimeout(() => {
+                    showRoyalAlert("Database Warning", "Product changes were only saved locally because the Supabase connection failed. They will disappear if you clear your browser data.", 'warning');
+                }, 1000);
+                return;
+            }
+
+            // ORIGINAL DB LOGIC (only runs if !dbError)
+            try {
+                let finalImageUrl = imageUrl;
+                
+                // Image handling logic
                 if (fileInput.files.length > 0) {
                     const file = fileInput.files[0];
                     const fileExt = file.name.split('.').pop();
                     const fileName = `${Date.now()}.${fileExt}`;
                     
+                    // Supabase Storage upload
                     const { error: uploadError } = await sb.storage.from('products').upload(fileName, file);
                     if (uploadError) throw uploadError;
                     
                     const { data: { publicUrl } } = sb.storage.from('products').getPublicUrl(fileName);
-                    imageUrl = publicUrl;
+                    finalImageUrl = publicUrl;
                 }
 
-                if (!imageUrl) throw new Error("Please provide an Image URL or upload a file.");
-
-                const variants = {
-                    'S': { price: document.getElementById('price-S').value, stock: document.getElementById('stock-S').value },
-                    'M': { price: document.getElementById('price-M').value, stock: document.getElementById('stock-M').value },
-                    'L': { price: document.getElementById('price-L').value, stock: document.getElementById('stock-L').value },
-                    'XL': { price: document.getElementById('price-XL').value, stock: document.getElementById('stock-XL').value }
-                };
+                if (!finalImageUrl) throw new Error("Please provide an Image URL or upload a file.");
                 
-                const stocks = Object.values(variants).map(v => Number(v.stock));
-                const prices = Object.values(variants).map(v => Number(v.price));
-                const totalStock = stocks.reduce((a,b) => a+b, 0);
-                const minPrice = Math.min(...prices);
-
                 const payload = {
-                    name: document.getElementById('prod-name').value,
+                    name: prodName,
                     category: document.getElementById('prod-category').value,
-                    image_url: imageUrl,
+                    image_url: finalImageUrl,
                     description: document.getElementById('prod-desc').value,
                     variants: variants,
                     price: minPrice, 
@@ -929,6 +1089,7 @@ function initAdmin() {
                 form.reset();
                 document.getElementById('prod-id').value = '';
                 loadAdminProducts();
+                document.querySelector('.tab-btn[data-target="products-section"]').click(); // Keep tab active
                 showRoyalToast("Success", "Product Saved Successfully");
             } catch (err) {
                 showRoyalAlert("Error", err.message, 'error');
@@ -946,7 +1107,12 @@ async function loadAdminProducts() {
 
     tbody.innerHTML = '<tr><td colspan="4" class="text-center">Loading products...</td></tr>';
 
-    const { data: products } = await sb.from('products').select('*').order('id', { ascending: false });
+    let products = MOCK_PRODUCTS; // Fallback to mock data
+
+    if (!dbError && sb) {
+        const { data: dbProducts } = await sb.from('products').select('*').order('id', { ascending: false });
+        if (dbProducts) products = dbProducts;
+    }
 
     if (!products || products.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" class="text-center">No products found.</td></tr>';
@@ -1015,90 +1181,252 @@ async function loadAdminProducts() {
 }
 
 
+// --- Admin Order Search/Render Logic ---
+function renderOrderCardHTML(o) {
+    const items = o.items || [];
+    const statusClass = o.status === 'Pending' ? 'status-pending' : 'status-paid';
+    
+    const itemsHtml = items.map(i => {
+        let imgUrl = 'https://via.placeholder.com/40';
+        if (productImgMap[i.product_name]) {
+            imgUrl = productImgMap[i.product_name];
+        } else {
+            const baseName = i.product_name.replace(/\s\([a-zA-Z0-9]+\)$/, '');
+            if (productImgMap[baseName]) {
+                imgUrl = productImgMap[baseName];
+            }
+        }
+
+        return `
+        <div class="order-item-row">
+            <img src="${imgUrl}" class="order-item-img">
+            <span>${i.product_name} x ${i.quantity}</span>
+            <span style="font-weight:600">₹${i.subtotal}</span>
+        </div>
+        `;
+    }).join('');
+
+    return `
+    <div class="order-card-content">
+        <div class="order-header" style="border-bottom: 1px solid var(--color-bg-secondary); padding-bottom: 15px; margin-bottom: 20px;">
+            <span class="order-id" style="font-size: 1.2rem; font-family: var(--font-heading);">ORDER #${o.id}</span>
+            <span class="order-date" style="font-size: 0.85rem; color:#666;">${new Date(o.created_at).toLocaleString()}</span>
+        </div>
+        <div class="order-body" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+            <div class="order-info">
+                <h5>CUSTOMER DETAILS</h5>
+                <p><strong>${o.customer_name}</strong></p>
+                <p style="color:#666; font-size:0.9rem;">${o.customer_email}</p>
+                <p style="color:#666; font-size:0.9rem;">Phone: ${o.customer_phone || 'N/A'}</p>
+                <h5 style="margin-top:15px;">SHIPPING ADDRESS</h5>
+                <p style="color:#666; font-size:0.9rem;">${o.address}</p>
+                <p style="color:#666; font-size:0.9rem;">Post Code: ${o.post_code || 'N/A'}</p>
+                <h5 style="margin-top:15px;">PAYMENT</h5>
+                <p>${o.payment_method}</p>
+            </div>
+            <div class="order-items-list">
+                <h5 style="margin-bottom:15px;">ORDER ITEMS</h5>
+                ${itemsHtml}
+                <div class="order-total-row" style="border-top: 1px solid #ddd; padding-top: 10px; margin-top: 10px; display: flex; justify-content: space-between;">
+                    <span>Total Amount:</span>
+                    <span style="font-size:1.2rem; font-weight:700;">₹${o.total_amount}</span>
+                </div>
+                 <div style="text-align:right; margin-top:10px;">
+                    <span class="status-badge ${statusClass}">${o.status}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    `;
+}
+
+function openOrderDetailModal(order) {
+    const modal = document.getElementById('order-detail-modal');
+    const content = document.getElementById('order-detail-content');
+    content.innerHTML = renderOrderCardHTML(order);
+    modal.classList.add('open');
+}
+
+function renderAdminOrders(ordersToRender) {
+    const grid = document.getElementById('admin-orders-grid');
+    if(!grid) return;
+
+    if(!ordersToRender || ordersToRender.length === 0) {
+        const searchTerm = document.getElementById('order-search-input')?.value.trim();
+        if (searchTerm) {
+             grid.innerHTML = '<p class="text-center">No orders matched your search criteria.</p>';
+        } else {
+            grid.innerHTML = '<p class="text-center">No orders found.</p>';
+        }
+        return;
+    }
+
+    grid.innerHTML = ordersToRender.map(o => {
+        // Render a compact card for the grid
+        const statusClass = o.status === 'Pending' ? 'status-pending' : 'status-paid';
+        return `
+            <div class="order-card" onclick="openOrderDetailModalById(${o.id})">
+                <div class="order-header">
+                    <span class="order-id">ORDER #${o.id}</span>
+                    <span class="order-date">${new Date(o.created_at).toLocaleString()}</span>
+                </div>
+                <div class="order-body" style="grid-template-columns: 1fr;">
+                    <div class="order-info">
+                        <p style="margin-bottom: 5px;"><strong>${o.customer_name}</strong> - ${o.customer_email}</p>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:1.2rem; font-weight:700;">₹${o.total_amount}</span>
+                            <span class="status-badge ${statusClass}">${o.status}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+window.openOrderDetailModalById = (id) => {
+    const order = detailedAdminOrders.find(o => o.id === id);
+    if(order) {
+        openOrderDetailModal(order);
+    } else {
+        showRoyalAlert('Order Not Found', `Details for Order #${id} could not be loaded.`, 'error');
+    }
+}
+
+function handleOrderSearch(e, isEnterKey) {
+    const searchInput = document.getElementById('order-search-input');
+    const clearBtn = document.getElementById('clear-search-btn');
+    const searchIcon = document.getElementById('search-icon-btn');
+    const searchTerm = searchInput.value.trim().toLowerCase();
+    
+    // Clean search term once for Order ID check (numerical only)
+    const orderIdSearchTerm = searchTerm.replace('#', '').trim();
+    
+    // --- UI Logic: Show/Hide Clear Button ---
+    if (searchTerm) {
+        clearBtn.style.display = 'block';
+        searchIcon.style.display = 'none';
+    } else {
+        clearBtn.style.display = 'none';
+        searchIcon.style.display = 'block';
+    }
+
+    // --- Modal Popup Logic (Only on Enter Key) ---
+    if (isEnterKey && orderIdSearchTerm) {
+        const orderIdNum = parseInt(orderIdSearchTerm);
+        const exactMatch = detailedAdminOrders.find(o => o.id === orderIdNum);
+
+        if (exactMatch) {
+            openOrderDetailModal(exactMatch);
+            // Clear search after successful pop-up
+            searchInput.value = '';
+            clearBtn.style.display = 'none';
+            searchIcon.style.display = 'block';
+            // Then re-render all orders in the background grid
+            renderAdminOrders(detailedAdminOrders); 
+            return;
+        } else {
+            showRoyalAlert('Order Not Found', `Order ID #${orderIdSearchTerm} not found.`, 'warning');
+        }
+    }
+    
+    // --- Grid Filtering Logic (On every input or non-Enter key search) ---
+    let ordersToRender = detailedAdminOrders;
+
+    if (searchTerm) {
+        ordersToRender = detailedAdminOrders.filter(o => {
+            const orderId = String(o.id);
+            const customerName = (o.customer_name || '').toLowerCase();
+            const customerEmail = (o.customer_email || '').toLowerCase();
+            const customerPhone = (o.customer_phone || '').toLowerCase();
+
+            // 1. Search by Order ID (partial contains the number)
+            if (orderIdSearchTerm && orderId.includes(orderIdSearchTerm)) return true;
+
+            // 2. Search by Name, Email, Phone (using the full search term)
+            if (customerName.includes(searchTerm)) return true;
+            if (customerEmail.includes(searchTerm)) return true;
+            if (customerPhone.includes(searchTerm)) return true;
+            
+            return false;
+        });
+    }
+
+    renderAdminOrders(ordersToRender);
+}
+// --- END Admin Order Search/Render Logic ---
+
 async function loadAdminOrders() {
     const grid = document.getElementById('admin-orders-grid');
     if(!grid) return;
     
     grid.innerHTML = '<p class="text-center">Loading orders...</p>';
     
-    const { data: allProducts } = await sb.from('products').select('name, image_url');
-    const productImgMap = {};
-    if (allProducts) {
+    let orders = MOCK_ORDERS;
+    let allItems = MOCK_ORDER_ITEMS;
+    let allProducts = MOCK_PRODUCTS;
+
+    // 1. Fetch products map (only once)
+    if (Object.keys(productImgMap).length === 0) {
+        if (!dbError && sb) {
+            const { data: dbProducts } = await sb.from('products').select('name, image_url');
+            if (dbProducts) allProducts = dbProducts;
+        }
         allProducts.forEach(p => {
             productImgMap[p.name] = p.image_url;
+            // Add variant names to the map as well for better mock coverage
+            if (p.variants) {
+                Object.keys(p.variants).forEach(size => {
+                    productImgMap[`${p.name} (${size})`] = p.image_url;
+                });
+            }
         });
+        
+    }
+
+    // 2. Fetch Orders & Items
+    if (!dbError && sb) {
+        const { data: dbOrders } = await sb.from('orders').select('*').order('created_at', { ascending: false });
+        if (dbOrders) orders = dbOrders;
+        
+        const { data: dbAllItems } = await sb.from('order_items').select('*');
+        if (dbAllItems) allItems = dbAllItems;
     }
     
-    const { data: orders } = await sb.from('orders').select('*').order('created_at', { ascending: false });
-    
     if(!orders || orders.length === 0) {
+        detailedAdminOrders = [];
         grid.innerHTML = '<p class="text-center">No orders found.</p>';
         return;
     }
     
-    const { data: allItems } = await sb.from('order_items').select('*');
-    
-    grid.innerHTML = orders.map(o => {
-        const items = allItems.filter(i => i.order_id === o.id);
-        const statusClass = o.status === 'Pending' ? 'status-pending' : 'status-paid';
-        
-        const itemsHtml = items.map(i => {
-            let imgUrl = 'https://via.placeholder.com/40';
-            if (productImgMap[i.product_name]) {
-                imgUrl = productImgMap[i.product_name];
-            } else {
-                const baseName = i.product_name.replace(/\s\([a-zA-Z0-9]+\)$/, '');
-                if (productImgMap[baseName]) {
-                    imgUrl = productImgMap[baseName];
-                }
-            }
-    
-            return `
-            <div class="order-item-row">
-                <img src="${imgUrl}" class="order-item-img">
-                <span>${i.product_name} x ${i.quantity}</span>
-                <span style="font-weight:600">₹${i.subtotal}</span>
-            </div>
-            `;
-        }).join('');
-    
-        return `
-        <div class="order-card">
-            <div class="order-header">
-                <span class="order-id">ORDER #${o.id}</span>
-                <span class="order-date">${new Date(o.created_at).toLocaleString()}</span>
-            </div>
-            <div class="order-body">
-                <div class="order-info">
-                    <h5>Customer Details</h5>
-                    <p><strong>${o.customer_name}</strong></p>
-                    <p style="color:#666; font-size:0.9rem;">${o.customer_email}</p>
-                    <p style="color:#666; font-size:0.9rem;">Phone: ${o.customer_phone || 'N/A'}</p>
-                    <h5 style="margin-top:15px;">Shipping Address</h5>
-                    <p style="color:#666; font-size:0.9rem;">${o.address}</p>
-                    <p style="color:#666; font-size:0.9rem; font-style: italic;">Near: N/A</p>
-                    <p style="color:#666; font-size:0.9rem;">Post Code: ${o.post_code || 'N/A'}</p>
-                    <h5 style="margin-top:15px;">Payment</h5>
-                    <p>${o.payment_method}</p>
-                </div>
-                <div class="order-items-list">
-                    <h5 style="margin-bottom:15px;">Order Items</h5>
-                    ${itemsHtml}
-                    <div class="order-total-row">
-                        <span>Total Amount:</span>
-                        <span style="font-size:1.2rem; font-weight:700;">₹${o.total_amount}</span>
-                    </div>
-                     <div style="text-align:right; margin-top:10px;">
-                        <span class="status-badge ${statusClass}">${o.status}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        `;
-    }).join('');
+    const itemsMap = allItems ? allItems.reduce((acc, item) => {
+        if (!acc[item.order_id]) acc[item.order_id] = [];
+        acc[item.order_id].push(item);
+        return acc;
+    }, {}) : {};
+
+    // 3. Combine and Store globally
+    detailedAdminOrders = orders.map(o => ({
+        ...o,
+        items: itemsMap[o.id] || []
+    }));
+
+    // 4. Render all initially (or filtered if search term exists)
+    handleOrderSearch(null, false);
 }
 
 window.deleteProduct = async (id) => {
+    if (dbError || !sb) {
+        const yes = await showRoyalConfirm('Permanently delete this product? (Client-side Mock)');
+        if(yes) {
+            MOCK_PRODUCTS = MOCK_PRODUCTS.filter(p => p.id !== id);
+            localStorage.setItem('mock_products', JSON.stringify(MOCK_PRODUCTS));
+            loadAdminProducts();
+            showRoyalToast("Deleted", "Product removed (Client-side Mock).");
+        }
+        return;
+    }
+    
     const yes = await showRoyalConfirm('Permanently delete this product?');
     if(yes) {
         await sb.from('products').delete().eq('id', id);
@@ -1108,7 +1436,13 @@ window.deleteProduct = async (id) => {
 }
 
 window.editProduct = async (id) => {
-    const { data: p } = await sb.from('products').select('*').eq('id', id).single();
+    let p = MOCK_PRODUCTS.find(p => p.id === id); // Fallback to mock
+
+    if (!dbError && sb) {
+        const { data: dbProduct } = await sb.from('products').select('*').eq('id', id).single();
+        if (dbProduct) p = dbProduct;
+    }
+
     if(p) {
         document.getElementById('prod-id').value = p.id;
         document.getElementById('prod-name').value = p.name;

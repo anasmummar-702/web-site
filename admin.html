@@ -43,12 +43,20 @@
         <div class="admin-container">
             <div class="admin-header">
                 <h2>Dashboard</h2>
-                <div class="tab-nav">
-                    <button class="tab-btn active" data-target="orders-section">Orders</button>
-                    <button class="tab-btn" data-target="products-section">Products</button>
+                <!-- Search bar is now here, opposite the Dashboard title -->
+                <div id="order-search-container" class="search-container" style="display:none; max-width: 350px;">
+                    <input type="text" id="order-search-input" class="select-input" placeholder="Search by Order ID, Name, Email, or Phone">
+                    <i class="fas fa-search search-icon" id="search-icon-btn"></i>
+                    <i class="fas fa-times clear-search" id="clear-search-btn" style="display:none;"></i>
                 </div>
             </div>
 
+            <!-- Tabs are separate but positioned correctly -->
+            <div class="tab-nav" style="margin-bottom: 25px;">
+                <button class="tab-btn active" data-target="orders-section">Orders</button>
+                <button class="tab-btn" data-target="products-section">Products</button>
+            </div>
+            
             <div id="orders-section" class="admin-section active">
                 <div id="admin-orders-grid" class="admin-card-grid">
                     <p class="text-center" style="grid-column: 1/-1;">Loading orders...</p>
@@ -131,6 +139,16 @@
                         </table>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW MODAL FOR SINGLE ORDER DETAILS -->
+    <div class="modal-overlay" id="order-detail-modal">
+        <div class="modal-content order-detail-content" style="max-width: 600px;">
+            <span class="close-modal" onclick="document.getElementById('order-detail-modal').classList.remove('open')">&times;</span>
+            <div id="order-detail-content">
+                <!-- Order HTML content will be injected here -->
             </div>
         </div>
     </div>
