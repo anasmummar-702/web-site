@@ -38,29 +38,40 @@
         </div>
 
         <div class="product-layout">
-            <div class="product-gallery">
-                <img id="detail-img" src="" alt="Product Image">
+            <!-- Gallery Section -->
+            <div class="product-gallery-wrapper">
+                <div class="product-main-image">
+                    <img id="detail-img" src="" alt="Product Image">
+                </div>
+                <div class="product-thumbnails" id="gallery-thumbs">
+                    <!-- Thumbnails -->
+                </div>
             </div>
 
+            <!-- Details Section -->
             <div class="product-info-col">
                 <div style="text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; color: var(--color-secondary); margin-bottom: 5px;" id="detail-cat-tag"></div>
                 <h1 id="detail-title">Loading...</h1>
                 <div class="price-tag" id="detail-price"></div>
-                
                 <div class="desc-text" id="detail-desc"></div>
 
                 <div style="background: white; border: 1px solid #eee; padding: 25px; border-radius: 8px;">
-                    <span id="stock-indicator" class="stock-status"></span>
                     
+                    <!-- VARIANT SELECTOR (COLOR) -->
+                    <div class="control-group" id="variant-selector-group" style="display:none;">
+                        <label class="control-label">Select Option (Color/Style)</label>
+                        <div id="variant-buttons-container" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
+                    </div>
+
+                    <!-- SIZE SELECTOR -->
                     <div class="control-group">
-                        <label class="control-label">Size</label>
-                        <select id="detail-size" class="select-input">
-                            <option value="S">Small</option>
-                            <option value="M" selected>Medium</option>
-                            <option value="L">Large</option>
-                            <option value="XL">Extra Large</option>
+                        <label class="control-label">Select Size</label>
+                        <select id="detail-size" class="select-input" disabled>
+                            <option>Select Option first</option>
                         </select>
                     </div>
+
+                    <span id="stock-indicator" class="stock-status"></span>
 
                     <div class="control-group">
                         <label class="control-label">Quantity</label>

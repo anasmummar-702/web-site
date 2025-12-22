@@ -4,16 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard | Royal Collections</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>body { background-color: #f4f6f8; }</style>
+    <style>body { background-color: #f8fafc; }</style>
 </head>
 <body>
     <div id="admin-login-screen" class="modal-overlay open" style="display:flex;">
-        <div class="modal-content" style="max-width: 400px;">
-            <h3 style="margin-bottom: 25px; font-family: var(--font-heading); text-align: center;">Admin Login</h3>
+        <div class="modal-content" style="max-width: 400px; padding: 40px;">
+            <h3 style="margin-bottom: 30px; font-family: var(--font-heading); text-align: center; color: var(--color-primary);">Admin Login</h3>
             <form id="admin-login-form">
                 <div class="control-group">
                     <label class="control-label">Username</label>
@@ -21,10 +21,10 @@
                 </div>
                 <div class="control-group">
                     <label class="control-label">Password</label>
-                    <input type="password" id="admin-password" class="select-input" required>
+                    <input type="password" id="admin-password" class="select-input" required placeholder="••••••••">
                 </div>
-                <button type="submit" id="admin-login-btn" class="btn btn-primary" style="width: 100%; margin-top: 15px;">Log In</button>
-                <div id="login-error-message" style="color:var(--color-error); text-align:center; margin-top:15px; font-size:0.9rem;"></div>
+                <button type="submit" id="admin-login-btn" class="btn btn-primary" style="width: 100%; margin-top: 10px;">Access Dashboard</button>
+                <div id="login-error-message" style="color:var(--color-error); text-align:center; margin-top:15px; font-size:0.85rem;"></div>
             </form>
         </div>
     </div>
@@ -32,38 +32,67 @@
     <header class="admin-main-header">
         <div class="admin-main-header-content">
             <div class="brand-logo"><a href="index.html"><h1>Royal Admin</h1></a></div>
-            <div style="display:flex; gap:10px; align-items:center;">
-                <a href="index.html" class="btn btn-outline-dark btn-sm">Back to Store</a>
-                <button id="admin-logout-btn" class="btn btn-sm btn-outline-dark" onclick="handleAdminLogout()" style="display:none;"><i class="fas fa-sign-out-alt"></i> Logout</button>
+            <div class="header-actions">
+                <a href="index.html" class="btn btn-sm btn-ghost">Storefront</a>
+                <button id="admin-logout-btn" class="btn btn-sm btn-ghost" onclick="handleAdminLogout()" style="display:none; color: var(--color-error);"><i class="fas fa-power-off"></i></button>
             </div>
         </div>
     </header>
 
     <div id="admin-dashboard-content" style="display: none;">
         <div class="admin-container">
-            <div class="admin-header">
-                <h2>Dashboard</h2>
-                <div class="tab-nav">
-                    <button class="tab-btn active" data-target="orders-section">Orders</button>
-                    <button class="tab-btn" data-target="products-section">Products</button>
-                </div>
+            <div class="admin-sidebar-nav">
+                <button class="nav-tab active" onclick="switchAdminTab('orders-section')"><i class="fas fa-shopping-bag"></i> Orders</button>
+                <button class="nav-tab" onclick="switchAdminTab('products-list-section')"><i class="fas fa-tshirt"></i> Products</button>
+                <button class="nav-tab action-tab" onclick="switchAdminTab('product-add-section'); resetProductForm();"><i class="fas fa-plus"></i> Add New</button>
             </div>
 
-            <div id="orders-section" class="admin-section active">
-                <div id="admin-orders-grid" class="admin-card-grid">
-                    <p class="text-center" style="grid-column: 1/-1;">Loading orders...</p>
+            <div class="admin-content-area">
+                <div id="orders-section" class="admin-section active">
+                    <div class="section-header">
+                        <h2>Order Management</h2>
+                        <div class="search-bar">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="order-search-input" placeholder="Search ID, Name, Phone..." onkeyup="filterOrdersLocal()">
+                        </div>
+                    </div>
+                    <div id="admin-orders-grid" class="admin-card-grid">
+                        <div class="empty-state">Loading orders...</div>
+                    </div>
                 </div>
-            </div>
 
-            <div id="products-section" class="admin-section" style="display: none;">
-                <div class="admin-grid-layout">
-                    <div class="form-layout">
-                        <h3 style="margin-bottom: 20px; font-family: var(--font-heading);">Add / Edit Product</h3>
-                        <form id="product-form">
-                            <input type="hidden" id="prod-id">
+                <div id="products-list-section" class="admin-section" style="display: none;">
+                    <div class="section-header">
+                        <h2>Product Inventory</h2>
+                    </div>
+                    <div class="table-container">
+                        <table class="modern-table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Category</th>
+                                    <th>Stock</th>
+                                    <th style="text-align: right;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-products-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="product-add-section" class="admin-section" style="display: none;">
+                    <div class="section-header">
+                        <h2 id="form-heading">Add New Product</h2>
+                        <button class="btn btn-sm btn-outline-dark" onclick="switchAdminTab('products-list-section')">Cancel</button>
+                    </div>
+                    
+                    <form id="product-form" class="admin-form">
+                        <input type="hidden" id="prod-id">
+                        
+                        <div class="form-row">
                             <div class="control-group">
                                 <label class="control-label">Product Name</label>
-                                <input type="text" id="prod-name" class="select-input" required>
+                                <input type="text" id="prod-name" class="select-input" required placeholder="Product Title">
                             </div>
                             <div class="control-group">
                                 <label class="control-label">Category</label>
@@ -75,65 +104,79 @@
                                     <option value="innerwears">Innerwears</option>
                                 </select>
                             </div>
+                        </div>
 
-                            <div class="control-group">
-                                <label class="control-label">Size Variants (Price & Stock)</label>
-                                <div class="variant-admin-grid">
-                                    <div class="variant-row">
-                                        <label>S</label>
-                                        <input type="number" id="price-S" class="select-input" placeholder="Price (₹)" required>
-                                        <input type="number" id="stock-S" class="select-input" placeholder="Stock" required>
-                                    </div>
-                                    <div class="variant-row">
-                                        <label>M</label>
-                                        <input type="number" id="price-M" class="select-input" placeholder="Price (₹)" required>
-                                        <input type="number" id="stock-M" class="select-input" placeholder="Stock" required>
-                                    </div>
-                                    <div class="variant-row">
-                                        <label>L</label>
-                                        <input type="number" id="price-L" class="select-input" placeholder="Price (₹)" required>
-                                        <input type="number" id="stock-L" class="select-input" placeholder="Stock" required>
-                                    </div>
-                                    <div class="variant-row">
-                                        <label>XL</label>
-                                        <input type="number" id="price-XL" class="select-input" placeholder="Price (₹)" required>
-                                        <input type="number" id="stock-XL" class="select-input" placeholder="Stock" required>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="control-group" style="background: #f9f9f9; padding: 15px; border-radius: 4px;">
-                                <label class="control-label">Product Image</label>
-                                <input type="file" id="prod-image-file" class="select-input" accept="image/*" style="margin-bottom: 10px;">
-                                <div style="text-align: center; font-size: 0.7rem; color: #999; margin: 5px 0;">- OR -</div>
-                                <input type="text" id="prod-image-url" class="select-input" placeholder="Image URL">
-                            </div>
+                        <div class="control-group">
+                            <label class="control-label">Description</label>
+                            <textarea id="prod-desc" class="select-input" rows="3" placeholder="Product details..."></textarea>
+                        </div>
 
-                            <div class="control-group">
-                                <label class="control-label">Description</label>
-                                <textarea id="prod-desc" class="select-input" rows="3"></textarea>
-                            </div>
-                            <button type="submit" id="save-product-btn" class="btn btn-primary" style="width: 100%;">Save Product</button>
-                        </form>
-                    </div>
+                        <div class="variants-section-header">
+                            <h3>Variants & Inventory</h3>
+                            <p>Add options like Color or Style. Each option can have its own image gallery and size list.</p>
+                        </div>
 
-                    <div style="background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; height: fit-content;">
-                        <table class="modern-table">
-                            <thead>
-                                <tr>
-                                    <th>Product</th>
-                                    <th>Category</th>
-                                    <th>Variants</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="admin-products-body"></tbody>
-                        </table>
-                    </div>
+                        <div id="variants-container"></div>
+
+                        <button type="button" class="btn btn-dashed" onclick="addVariantBlock()">
+                            <i class="fas fa-plus-circle"></i> Add Another Variant (Color/Style)
+                        </button>
+
+                        <div class="form-footer">
+                            <button type="submit" id="save-product-btn" class="btn btn-primary btn-lg">Save Product</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
+
+    <template id="variant-block-template">
+        <div class="variant-block">
+            <div class="variant-header">
+                <span class="drag-handle"><i class="fas fa-grip-lines"></i></span>
+                <div class="control-group" style="margin:0; flex-grow:1;">
+                    <input type="text" class="variant-name-input select-input" required placeholder="Variant Name (e.g. Red, Striped)">
+                </div>
+                <button type="button" class="btn-icon delete" onclick="this.closest('.variant-block').remove()"><i class="fas fa-trash-alt"></i></button>
+            </div>
+
+            <div class="variant-body">
+                <div class="control-group">
+                    <label class="control-label">Gallery Images</label>
+                    <div class="file-upload-wrapper">
+                        <input type="file" class="variant-image-input" accept="image/*" multiple>
+                        <span class="upload-label"><i class="fas fa-cloud-upload-alt"></i> Choose Images</span>
+                    </div>
+                    <div class="variant-img-preview"></div>
+                    <input type="hidden" class="existing-images-json">
+                </div>
+
+                <div class="size-manager">
+                    <div class="size-header">
+                        <label class="control-label">Sizes & Stock</label>
+                        <select class="size-preset-trigger select-input small-select" onchange="applyPresetToRow(this)">
+                            <option value="">+ Quick Fill...</option>
+                            <option value="ladies_standard">S - 5XL</option>
+                            <option value="jeans">Jeans (28-40)</option>
+                            <option value="kids">Kids (0-36)</option>
+                            <option value="footwear">Shoes (5-9)</option>
+                            <option value="bra">Bra (30-42)</option>
+                            <option value="inner_other">Other (50-110)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="size-table-wrapper">
+                        <table class="variant-table">
+                            <thead><tr><th>Size</th><th>Price (₹)</th><th>Stock</th><th></th></tr></thead>
+                            <tbody class="size-rows-container"></tbody>
+                        </table>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-ghost" onclick="addSizeRow(this.closest('.size-manager').querySelector('tbody'))">+ Add Single Size Row</button>
+                </div>
+            </div>
+        </div>
+    </template>
 
     <script src="script.js"></script>
 </body>
