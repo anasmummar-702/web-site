@@ -378,3 +378,121 @@ async function initProductDetail() {
         }
     }
 }
+
+// --- CART PAGE LOGIC (FIXED) ---
+function initCartPage() {
+    const container = document.getElementById('cart-items-container');
+    if (!container) return;
+    
+    if (cart.length === 0) {
+        container.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 40px;">Your Shopping Bag is empty.</td></tr>';
+        document.getElementById('sub-total').innerText = '₹0';
+        document.getElementById('cart-total').innerText = '₹0';
+        return;
+    }
+
+    container.innerHTML = cart.map((item, i) => `
+        <tr>
+            <td data-label="Product">
+                <div style="display:flex; align-items:center; gap:15px; text-align:left;">
+                    <img src="${item.img}" style="width:60px; height:80px; object-fit:cover; border-radius:4px;">
+                    <div>
+                        <div style="font-weight:600; color:var(--color-primary);">${item.name}</div>
+                        <small style="color:var(--color-secondary);">Size: ${item.size}</small>
+                    </div>
+                </div>
+            </td>
+            <td data-label="Price">₹${item.price}</td>
+            <td data-label="Qty">
+                <div style="display:flex; align-items:center; gap:5px;">
+                    <button class="btn-icon" onclick="updateCartQty(${i}, -1)">-</button>
+                    <span>${item.qty}</span>
+                    <button class="btn-icon" onclick="updateCartQty(${i}, 1)">+</button>
+                </div>
+            </td>
+            <td data-label="Total">₹${item.price * item.qty}</td>
+            <td style="text-align:right;">
+                <button class="btn-icon" onclick="removeFromCart(${i})"><i class="fas fa-trash"></i></button>
+            </td>
+        </tr>
+    `).join('');
+
+    const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    document.getElementById('sub-total').innerText = `₹${total}`;
+    document.getElementById('cart-total').innerText = `₹${total}`;
+}
+
+window.updateCartQty = (i, change) => {
+    const item = cart[i];
+    const newQty = item.qty + change;
+    if (newQty < 1) return;
+    if (newQty > item.maxStock) return alert(`Only ${item.maxStock} units available.`);
+    item.qty = newQty;
+    saveCart();
+    initCartPage();
+};
+
+window.removeFromCart = (i) => {
+    if(confirm("Remove this item?")) {
+        cart.splice(i, 1);
+        saveCart();
+        initCartPage();
+    }
+};
+
+window.openCheckout = () => {
+    if(cart.length === 0) return alert("Your bag is empty.");
+    document.getElementById('checkout-modal').style.display = 'flex';
+};
+
+window.closeCheckout = () => {
+    document.getElementById('checkout-modal').style.display = 'none';
+};
+
+window.submitOrder = async (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalText = btn.innerText;
+    btn.disabled = true; btn.innerText = "Processing...";
+
+    try {
+        const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+        
+        const orderData = {
+            customer_name: document.getElementById('cust-name').value,
+            customer_email: document.getElementById('cust-email').value,
+            customer_phone: document.getElementById('cust-phone-number').value,
+            address: `${document.getElementById('cust-address').value} ${document.getElementById('cust-near-address').value || ''}`,
+            post_code: document.getElementById('cust-postcode').value,
+            total_amount: total,
+            status: 'Pending',
+            payment_method: document.getElementById('payment-method').value
+        };
+        
+        const { data: order, error: errOrder } = await sb.from('orders').insert([orderData]).select().single();
+        if(errOrder) throw errOrder;
+
+        const itemsData = cart.map(item => ({
+            order_id: order.id,
+            // Removed product_id, variant, size because they are missing in the DB table
+            product_name: item.name, // This contains name + variant + size string
+            quantity: item.qty,
+            price: item.price,
+            subtotal: item.price * item.qty
+        }));
+
+        const { error: errItems } = await sb.from('order_items').insert(itemsData);
+        if(errItems) throw errItems;
+
+        cart = [];
+        saveCart();
+        closeCheckout();
+        initCartPage();
+        showRoyalToast("Success", "Order placed successfully!");
+        setTimeout(() => window.location.href = "index.html", 2000);
+
+    } catch(error) {
+        alert("Order Failed: " + error.message);
+        btn.disabled = false; btn.innerText = originalText;
+    }
+};
