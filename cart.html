@@ -88,8 +88,10 @@
                 <div class="control-group">
                     <label class="control-label">Contact Info (Phone Number)</label>
                     <div class="contact-input-group">
-                        <select id="country-code-select" class="select-input country-code-select"></select>
-                        <input type="number" id="cust-phone-number" class="select-input" required placeholder="Phone Number">
+                        <select id="country-code-select" class="select-input country-code-select">
+                            <option value="+91">🇮🇳 +91</option>
+                        </select>
+                        <input type="tel" id="cust-phone-number" class="select-input" required placeholder="Phone Number" oninput="handlePhoneInput(this)">
                     </div>
                 </div>
                 <div class="control-group">

@@ -10,7 +10,6 @@ if (typeof supabase !== 'undefined') {
 let cart = JSON.parse(localStorage.getItem('royal_cart')) || [];
 let currentAdminOrders = [];
 
-// --- UTILS ---
 function showRoyalToast(title, message, isError = false) {
     let toast = document.querySelector('.cart-toast');
     if (toast) toast.remove();
@@ -23,7 +22,6 @@ function showRoyalToast(title, message, isError = false) {
 }
 function showRoyalConfirm(message) { return confirm(message); }
 
-// --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
     const mobileToggle = document.querySelector('.mobile-menu-toggle');
     const nav = document.querySelector('.main-navigation');
@@ -45,7 +43,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     else initListingPage();
 });
 
-// --- ADMIN LOGIC ---
 const ADMIN_PASSWORD = 'royal.soman';
 const ADMIN_SESSION_KEY = 'royal_admin_logged_in'; 
 
@@ -140,13 +137,11 @@ function initAdmin() {
     });
 }
 
-// --- ORDER SEARCH FIX ---
 window.filterOrdersLocal = () => {
     const term = document.getElementById('order-search-input').value.toLowerCase().trim();
     const grid = document.getElementById('admin-orders-grid');
     
     if(!term) {
-        // Show all stored orders
         if(currentAdminOrders.length > 0) fetchAndRenderItems(currentAdminOrders);
         else grid.innerHTML = '<div class="empty-state">No orders.</div>';
         return;
@@ -170,7 +165,6 @@ async function loadAdminOrders() {
     const grid = document.getElementById('admin-orders-grid');
     grid.innerHTML = '<div class="empty-state">Loading...</div>';
 
-    // Fetch latest 200 orders to enable client-side search
     const { data: orders } = await sb.from('orders').select('*').order('created_at', { ascending: false }).limit(200);
 
     if(!orders || orders.length === 0) { 
@@ -179,12 +173,11 @@ async function loadAdminOrders() {
         return; 
     }
     
-    currentAdminOrders = orders; // Store for local search
+    currentAdminOrders = orders;
     fetchAndRenderItems(orders);
 }
 
 async function fetchAndRenderItems(ordersToRender) {
-    // Optimization: Only fetch items for the orders we are about to show
     const ids = ordersToRender.map(o => o.id);
     const { data: items } = await sb.from('order_items').select('*').in('order_id', ids);
     
@@ -213,7 +206,6 @@ async function fetchAndRenderItems(ordersToRender) {
     document.getElementById('admin-orders-grid').innerHTML = html;
 }
 
-// --- ADMIN UI HELPERS ---
 window.handleAdminLogout = () => { if(confirm("Logout?")) { localStorage.removeItem(ADMIN_SESSION_KEY); location.reload(); } }
 window.switchAdminTab = (targetId) => {
     document.querySelectorAll('.admin-section').forEach(s => s.style.display = 'none');
@@ -282,7 +274,6 @@ window.editProduct = async (id) => {
     if(Array.isArray(p.variants)) {
         p.variants.forEach(v => addVariantBlock(v));
     } else {
-        // Legacy conversion
         let sizes = [];
         if(p.variants && p.variants.options) sizes = p.variants.options;
         else if(p.variants) for(let k in p.variants) { if(k!=='gallery') sizes.push({size:k, ...p.variants[k]}) };
@@ -301,7 +292,6 @@ async function loadAdminProducts() {
     tbody.innerHTML = products.map(p => `<tr><td data-label="Item"><div class="admin-product-item"><img src="${p.image_url}" class="admin-product-thumb"><strong>${p.name}</strong></div></td><td data-label="Category">${p.category}</td><td data-label="Stock">${p.stock_quantity} units</td><td data-label="Actions" style="text-align:right;"><button class="btn-icon" onclick="editProduct(${p.id})"><i class="fas fa-edit"></i></button><button class="btn-icon" onclick="deleteProduct(${p.id})"><i class="fas fa-trash-alt"></i></button></td></tr>`).join('');
 }
 
-// --- STANDARD FUNCTIONS ---
 function updateCartCount() { document.querySelectorAll('.cart-count').forEach(el => el.innerText = cart.reduce((acc, item) => acc + item.qty, 0)); }
 function saveCart() { localStorage.setItem('royal_cart', JSON.stringify(cart)); updateCartCount(); }
 function addToCart(id, name, price, img, maxStock, qty, size, variantName) {
@@ -379,7 +369,6 @@ async function initProductDetail() {
     }
 }
 
-// --- CART PAGE LOGIC (FIXED) ---
 function initCartPage() {
     const container = document.getElementById('cart-items-container');
     if (!container) return;
@@ -449,19 +438,37 @@ window.closeCheckout = () => {
     document.getElementById('checkout-modal').style.display = 'none';
 };
 
+window.handlePhoneInput = (el) => {
+    el.value = el.value.replace(/\D/g, '');
+    if(el.value.length > 10) {
+        el.value = el.value.slice(0, 10);
+        showRoyalToast("Warning", "Maximum 10 digits allowed.", true);
+    }
+};
+
 window.submitOrder = async (e) => {
     e.preventDefault();
     const btn = e.target.querySelector('button[type="submit"]');
     const originalText = btn.innerText;
+    
+    const phoneInput = document.getElementById('cust-phone-number');
+    if(phoneInput.value.length !== 10) {
+        showRoyalToast("Error", "Please enter a valid 10-digit phone number.", true);
+        return;
+    }
+
     btn.disabled = true; btn.innerText = "Processing...";
 
     try {
         const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
         
+        const countryCode = document.getElementById('country-code-select').value.replace('+','');
+        const finalPhone = countryCode + phoneInput.value;
+
         const orderData = {
             customer_name: document.getElementById('cust-name').value,
             customer_email: document.getElementById('cust-email').value,
-            customer_phone: document.getElementById('cust-phone-number').value,
+            customer_phone: finalPhone, 
             address: `${document.getElementById('cust-address').value} ${document.getElementById('cust-near-address').value || ''}`,
             post_code: document.getElementById('cust-postcode').value,
             total_amount: total,
@@ -474,8 +481,7 @@ window.submitOrder = async (e) => {
 
         const itemsData = cart.map(item => ({
             order_id: order.id,
-            // Removed product_id, variant, size because they are missing in the DB table
-            product_name: item.name, // This contains name + variant + size string
+            product_name: item.name, 
             quantity: item.qty,
             price: item.price,
             subtotal: item.price * item.qty

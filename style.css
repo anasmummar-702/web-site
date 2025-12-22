@@ -84,6 +84,9 @@ input, select, textarea { font-family: inherit; }
 .control-group { margin-bottom: 20px; }
 .control-label { display: block; font-size: 0.75rem; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px; color: var(--color-secondary); }
 
+.contact-input-group { display: flex; gap: 10px; }
+.country-code-select { width: auto; min-width: 100px; flex-shrink: 0; }
+
 /* --- HEADER & NAV --- */
 .announcement-bar { background: var(--color-primary); color: #fff; text-align: center; padding: 10px; font-size: 0.75rem; letter-spacing: 1px; text-transform: uppercase; font-weight: 600; }
 
