@@ -194,7 +194,7 @@ async function fetchAndRenderItems(ordersToRender) {
         ).join('');
         
         return `<div class="order-card">
-            <div class="order-header"><strong>#${o.id}</strong> <span>${new Date(o.created_at).toLocaleDateString()}</span></div>
+            <div class="order-header"><strong>#${o.id}</strong> <span>${new Date(o.created_at).toLocaleString()}</span></div>
             <div class="order-body">
                 <div class="order-info">
                     <p><i class="fas fa-user"></i> <strong>${o.customer_name}</strong></p>
