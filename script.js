@@ -497,6 +497,52 @@ window.submitOrder = async (e) => {
         const { error: errItems } = await sb.from('order_items').insert(itemsData);
         if(errItems) throw errItems;
 
+        for (const item of cart) {
+            const { data: product } = await sb.from('products').select('*').eq('id', item.id).single();
+            if (product && product.variants) {
+                let variants = product.variants;
+                let updated = false;
+
+                if (Array.isArray(variants)) {
+                    const varIndex = variants.findIndex(v => v.name === item.variant);
+                    if (varIndex !== -1) {
+                        const sizeIndex = variants[varIndex].sizes.findIndex(s => s.size === item.size);
+                        if (sizeIndex !== -1) {
+                            let currentStock = parseInt(variants[varIndex].sizes[sizeIndex].stock);
+                            let newStock = Math.max(0, currentStock - item.qty);
+                            variants[varIndex].sizes[sizeIndex].stock = newStock;
+                            updated = true;
+                        }
+                    }
+                } 
+                else if (typeof variants === 'object') {
+                     if (variants.options && Array.isArray(variants.options)) {
+                        const sizeIndex = variants.options.findIndex(s => s.size === item.size);
+                         if (sizeIndex !== -1) {
+                            let currentStock = parseInt(variants.options[sizeIndex].stock);
+                            let newStock = Math.max(0, currentStock - item.qty);
+                            variants.options[sizeIndex].stock = newStock;
+                            updated = true;
+                         }
+                     }
+                }
+
+                if (updated) {
+                    let newTotalStock = 0;
+                    if (Array.isArray(variants)) {
+                        variants.forEach(v => v.sizes.forEach(s => newTotalStock += parseInt(s.stock)));
+                    } else if (variants.options) {
+                        variants.options.forEach(s => newTotalStock += parseInt(s.stock));
+                    }
+
+                    await sb.from('products').update({ 
+                        variants: variants, 
+                        stock_quantity: newTotalStock 
+                    }).eq('id', item.id);
+                }
+            }
+        }
+
         cart = [];
         saveCart();
         closeCheckout();
