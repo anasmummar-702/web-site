@@ -138,7 +138,7 @@ function initAdmin() {
 }
 
 window.filterOrdersLocal = () => {
-    const term = document.getElementById('order-search-input').value.toLowerCase().trim();
+    let term = document.getElementById('order-search-input').value.toLowerCase().trim();
     const grid = document.getElementById('admin-orders-grid');
     
     if(!term) {
@@ -147,12 +147,19 @@ window.filterOrdersLocal = () => {
         return;
     }
     
-    const filtered = currentAdminOrders.filter(o => 
-        String(o.id).includes(term) || 
+    let idTerm = term;
+    if (idTerm.startsWith('#')) {
+        idTerm = idTerm.substring(1);
+    }
+    
+    let filtered = currentAdminOrders.filter(o => 
+        String(o.id).includes(idTerm) || 
         (o.customer_name && o.customer_name.toLowerCase().includes(term)) ||
         (o.customer_phone && String(o.customer_phone).includes(term)) ||
         (o.address && o.address.toLowerCase().includes(term))
     );
+    
+    filtered.sort((a, b) => a.id - b.id);
     
     if(filtered.length === 0) {
         grid.innerHTML = '<div class="empty-state">No matches found.</div>';
@@ -494,8 +501,9 @@ window.submitOrder = async (e) => {
         saveCart();
         closeCheckout();
         initCartPage();
-        showRoyalToast("Success", "Order placed successfully!");
-        setTimeout(() => window.location.href = "index.html", 2000);
+        showRoyalToast("Success", "Order Placed! ID: #" + order.id);
+        alert(`Order Placed Successfully!\n\nYour Order ID: #${order.id}\n\nPlease save this ID to track your order.`);
+        setTimeout(() => window.location.href = "index.html", 500);
 
     } catch(error) {
         alert("Order Failed: " + error.message);
