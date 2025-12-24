@@ -1,5 +1,6 @@
 const SUPABASE_URL = 'https://zxpttznsgulnhxmdijot.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp4cHR0em5zZ3Vsbmh4bWRpam90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4NjQ2MTgsImV4cCI6MjA4MDQ0MDYxOH0.8yB-oDUer9_fwptcf_wzC8xeW7v9LR6ZIQX_xKDJCwg';
+const RAZORPAY_KEY_ID = 'rzp_test_RvQPhFi19XDJlW'; 
 
 let sb = null;
 if (typeof supabase !== 'undefined') {
@@ -100,10 +101,7 @@ function initAdmin() {
                             if (typeof imageCompression !== 'undefined') {
                                 console.log(`Attempting compression on: ${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`);
                                 uploadFile = await imageCompression(file, compressionOptions);
-                                console.log(`Result: ${uploadFile.name} (${(uploadFile.size/1024/1024).toFixed(2)} MB)`);
-                            } else {
-                                console.warn("Compression library not loaded.");
-                            }
+                            } 
                         } catch (err) {
                             console.warn("Compression failed, uploading original.", err);
                         }
@@ -118,8 +116,8 @@ function initAdmin() {
                         imageUrls.push(data.publicUrl);
                     }
                 }
-                if(imageUrls.length === 0) throw new Error(`Variant "${varName}" needs at least one image.`);
-                if(!mainImage) mainImage = imageUrls[0];
+                if(imageUrls.length === 0 && !existingJson) throw new Error(`Variant "${varName}" needs at least one image.`);
+                if(!mainImage && imageUrls.length > 0) mainImage = imageUrls[0];
 
                 const sizeRows = block.querySelectorAll('tbody tr');
                 let sizesData = [];
@@ -225,10 +223,12 @@ async function fetchAndRenderItems(ordersToRender) {
                     <p><i class="fas fa-phone"></i> ${o.customer_phone || '-'}</p>
                     <p><i class="fas fa-map-marker-alt"></i> ${o.address}</p>
                     <small>Code: ${o.post_code || '-'}</small>
+                    <p><small>Method: ${o.payment_method}</small></p>
                 </div>
                 <div class="order-items-list">${orderItems}
                     <div style="text-align:right; font-weight:bold; margin-top:10px; font-size:1.1rem;">₹${o.total_amount}</div>
                     <div style="text-align:right; margin-top:5px;"><span class="status-badge ${o.status==='Pending'?'status-pending':'status-paid'}">${o.status}</span></div>
+                    ${o.payment_id ? `<div style="text-align:right; font-size:0.75rem; margin-top:4px; color:var(--color-secondary);">Pay ID: ${o.payment_id}</div>` : ''}
                 </div>
             </div>
         </div>`;
@@ -477,36 +477,10 @@ window.handlePhoneInput = (el) => {
     }
 };
 
-window.submitOrder = async (e) => {
-    e.preventDefault();
-    const btn = e.target.querySelector('button[type="submit"]');
-    const originalText = btn.innerText;
+async function processDatabaseInsertion(orderData) {
+    const btn = document.getElementById('checkout-btn');
     
-    const phoneInput = document.getElementById('cust-phone-number');
-    if(phoneInput.value.length !== 10) {
-        showRoyalToast("Error", "Please enter a valid 10-digit phone number.", true);
-        return;
-    }
-
-    btn.disabled = true; btn.innerText = "Processing...";
-
     try {
-        const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-        
-        const countryCode = document.getElementById('country-code-select').value.replace('+','');
-        const finalPhone = countryCode + phoneInput.value;
-
-        const orderData = {
-            customer_name: document.getElementById('cust-name').value,
-            customer_email: document.getElementById('cust-email').value,
-            customer_phone: finalPhone, 
-            address: `${document.getElementById('cust-address').value} ${document.getElementById('cust-near-address').value || ''}`,
-            post_code: document.getElementById('cust-postcode').value,
-            total_amount: total,
-            status: 'Pending',
-            payment_method: document.getElementById('payment-method').value
-        };
-        
         const { data: order, error: errOrder } = await sb.from('orders').insert([orderData]).select().single();
         if(errOrder) throw errOrder;
 
@@ -517,7 +491,6 @@ window.submitOrder = async (e) => {
             price: item.price,
             subtotal: item.price * item.qty
         }));
-
         const { error: errItems } = await sb.from('order_items').insert(itemsData);
         if(errItems) throw errItems;
 
@@ -571,12 +544,106 @@ window.submitOrder = async (e) => {
         saveCart();
         closeCheckout();
         initCartPage();
+        
         showRoyalToast("Success", "Order Placed! ID: #" + order.id);
-        alert(`Order Placed Successfully!\n\nYour Order ID: #${order.id}\n\nPlease save this ID to track your order.`);
+        
+        let successMsg = `Order Placed Successfully!\n\nOrder ID: #${order.id}`;
+        if(order.payment_method === 'Online') {
+            successMsg += `\nPayment ID: ${order.payment_id}`;
+        }
+        successMsg += `\n\nPlease save this ID to track your order.`;
+        
+        alert(successMsg);
         setTimeout(() => window.location.href = "index.html", 500);
 
     } catch(error) {
-        alert("Order Failed: " + error.message);
-        btn.disabled = false; btn.innerText = originalText;
+        console.error("Order DB Error:", error);
+        alert("Order Processing Failed: " + error.message);
+    } finally {
+        if(btn) {
+            btn.disabled = false; 
+            btn.innerText = "Complete Order";
+        }
+    }
+}
+
+window.submitOrder = async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('checkout-btn');
+    const originalText = btn.innerText;
+    
+    const phoneInput = document.getElementById('cust-phone-number');
+    if(phoneInput.value.length !== 10) {
+        showRoyalToast("Error", "Please enter a valid 10-digit phone number.", true);
+        return;
+    }
+
+    const countryCode = document.getElementById('country-code-select').value.replace('+','');
+    const finalPhone = countryCode + phoneInput.value;
+    const paymentMethod = document.getElementById('payment-method').value;
+    const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+
+    let orderData = {
+        customer_name: document.getElementById('cust-name').value,
+        customer_email: document.getElementById('cust-email').value,
+        customer_phone: finalPhone, 
+        address: `${document.getElementById('cust-address').value} ${document.getElementById('cust-near-address').value || ''}`,
+        post_code: document.getElementById('cust-postcode').value,
+        total_amount: totalAmount,
+        payment_method: paymentMethod,
+        status: 'Pending'
+    };
+
+    btn.disabled = true; 
+    btn.innerText = "Processing...";
+
+    if (paymentMethod === 'Online') {
+        const options = {
+            "key": RAZORPAY_KEY_ID, 
+            "amount": totalAmount * 100, 
+            "currency": "INR",
+            "name": "Royal Collections",
+            "description": "Purchase Order",
+            "image": "home_image/royal_collections.jpg", 
+            "handler": function (response) {
+                orderData.status = 'Paid'; 
+                orderData.payment_id = response.razorpay_payment_id; 
+                
+                processDatabaseInsertion(orderData);
+            },
+            "prefill": {
+                "name": orderData.customer_name,
+                "email": orderData.customer_email,
+                "contact": orderData.customer_phone
+            },
+            "theme": {
+                "color": "#121212"
+            },
+            "modal": {
+                "ondismiss": function() {
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                    showRoyalToast("Cancelled", "Payment process cancelled.", true);
+                }
+            }
+        };
+
+        try {
+            const rzp1 = new Razorpay(options);
+            rzp1.on('payment.failed', function (response){
+                alert("Payment Failed: " + response.error.description);
+                btn.disabled = false;
+                btn.innerText = originalText;
+            });
+            rzp1.open();
+        } catch (err) {
+            console.error("Razorpay Error:", err);
+            alert("Could not initiate payment. Check console.");
+            btn.disabled = false;
+            btn.innerText = originalText;
+        }
+
+    } else {
+        await processDatabaseInsertion(orderData);
     }
 };
