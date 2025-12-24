@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Successful | Royal Collections</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .thank-you-section {
+            max-width: 700px;
+            margin: 60px auto;
+            padding: 40px;
+            text-align: center;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
+            background: #fff;
+        }
+        .thank-you-section h2 {
+            font-family: var(--font-heading);
+            color: var(--color-primary);
+            margin-bottom: 15px;
+            font-size: 2.2rem;
+        }
+        .thank-you-section p {
+            color: var(--color-secondary);
+            font-size: 0.95rem;
+            line-height: 1.7;
+            margin-bottom: 10px;
+        }
+        .thank-you-section .order-details {
+            margin-top: 30px;
+            padding: 20px;
+            background: var(--color-bg-secondary);
+            border-radius: var(--radius-sm);
+            text-align: left;
+            border: 1px solid #eee;
+        }
+        .thank-you-section .order-details p {
+            margin-bottom: 8px;
+        }
+        .thank-you-section .btn-primary {
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <header class="site-header">
+        <div class="header-main">
+            <div class="mobile-menu-toggle"><i class="fas fa-bars"></i></div>
+            <div class="brand-logo"><a href="index.html"><h1>Royal Collections</h1></a></div>
+            <nav class="main-navigation">
+                <ul class="nav-list">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="ladies.html">Ladies</a></li>
+                    <li><a href="kids.html">Kids</a></li>
+                    <li><a href="shoes.html">Footwear</a></li>
+                    <li><a href="cosmetics.html">Jewelry</a></li>
+                    <li><a href="innerwears.html">Innerwears</a></li>
+                </ul>
+            </nav>
+            <div class="header-icons">
+                <a href="cart.html" class="cart-icon"><i class="fas fa-shopping-bag"></i><span class="cart-count">0</span></a>
+            </div>
+        </div>
+    </header>
+
+    <section class="container thankyou-container">
+        <div class="thank-you-section">
+            <div id="thankyou-message">
+            </div>
+            <div class="order-details" id="order-details">
+            </div>
+            <a href="index.html" class="btn btn-primary">Continue Shopping</a>
+        </div>
+    </section>
+
+    <footer style="padding: 40px 0; border-top: 1px solid #eee; text-align: center; margin-top: 60px;">
+        <p style="color: var(--color-secondary); font-size: 0.9rem;">&copy; 2025 Royal Collections.</p>
+    </footer>
+    <script src="script.js"></script>
+</body>
+</html>

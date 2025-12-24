@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (path.includes('admin')) initAdmin();
     else if (path.includes('product')) initProductDetail();
     else if (path.includes('cart')) initCartPage();
+    else if (path.includes('thankyou')) initThankYouPage();
     else if (path.includes('index') || path === '/' || path.endsWith('/')) initHomePage();
     else initListingPage();
 });
@@ -476,7 +477,6 @@ window.handlePhoneInput = (el) => {
         showRoyalToast("Warning", "Maximum 10 digits allowed.", true);
     }
 };
-
 async function processDatabaseInsertion(orderData) {
     const btn = document.getElementById('checkout-btn');
     
@@ -551,15 +551,13 @@ async function processDatabaseInsertion(orderData) {
         if(order.payment_method === 'Online') {
             successMsg += `\nPayment ID: ${order.payment_id}`;
         }
-        successMsg += `\n\nPlease save this ID to track your order.`;
+        successMsg += `\n\nThank you for your order!`;
         
-        alert(successMsg);
-        setTimeout(() => window.location.href = "index.html", 500);
+        thankYouPage(order.id, order.total_amount);
 
     } catch(error) {
         console.error("Order DB Error:", error);
         alert("Order Processing Failed: " + error.message);
-    } finally {
         if(btn) {
             btn.disabled = false; 
             btn.innerText = "Complete Order";
@@ -608,7 +606,6 @@ window.submitOrder = async (e) => {
             "handler": function (response) {
                 orderData.status = 'Paid'; 
                 orderData.payment_id = response.razorpay_payment_id; 
-                
                 processDatabaseInsertion(orderData);
             },
             "prefill": {
@@ -647,3 +644,28 @@ window.submitOrder = async (e) => {
         await processDatabaseInsertion(orderData);
     }
 };
+
+function initThankYouPage() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderId = urlParams.get('orderId');
+    const totalAmount = urlParams.get('totalAmount');
+    const thankyouMessage = document.getElementById('thankyou-message');
+    const orderDetails = document.getElementById('order-details');
+
+    if (thankyouMessage && orderId && totalAmount) {
+        thankyouMessage.innerHTML = `<h2>Thank You for Your Order!</h2>
+                                     <p>Your order has been placed successfully. We'll process it shortly.</p>`;
+        orderDetails.innerHTML = `<p><strong>Order ID:</strong> #${orderId}</p>
+                                <p><strong>Total Amount:</strong> ₹${totalAmount}</p>
+                                <p><strong>Shipping:</strong> Your order will be shipped on the same or next working day.</p>
+                                <p><strong>Delivery Estimate:</strong> Delivery may take up to 6 days depending on your location.</p>`;
+    } else {
+        thankyouMessage.innerHTML = `<h2>Order Not Found</h2>
+                                     <p>We could not retrieve your order details. Please contact support if you have been charged.</p>`;
+        orderDetails.innerHTML = '';
+    }
+}
+
+function thankYouPage(orderId, totalAmount) {
+    window.location.href = `thankyou.html?orderId=${orderId}&totalAmount=${totalAmount}`;
+}
