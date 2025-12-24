@@ -68,7 +68,7 @@ function initAdmin() {
     document.getElementById('product-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('save-product-btn');
-        btn.disabled = true; btn.innerText = "Saving...";
+        btn.disabled = true; btn.innerText = "Compressing & Saving...";
 
         try {
             const variantBlocks = document.querySelectorAll('.variant-block');
@@ -86,12 +86,36 @@ function initAdmin() {
                 
                 let imageUrls = existingJson ? JSON.parse(existingJson) : [];
                 if (fileInput.files.length > 0) {
+                    const compressionOptions = {
+                        maxSizeMB: 0.5,
+                        maxWidthOrHeight: 1280,
+                        useWebWorker: false,
+                        fileType: "image/jpeg",
+                        initialQuality: 0.7
+                    };
+
                     for(let file of fileInput.files) {
-                         const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${file.name.split('.').pop()}`;
-                         const { error } = await sb.storage.from('products').upload(fileName, file);
-                         if (error) throw error;
-                         const { data } = sb.storage.from('products').getPublicUrl(fileName);
-                         imageUrls.push(data.publicUrl);
+                        let uploadFile = file;
+                        try {
+                            if (typeof imageCompression !== 'undefined') {
+                                console.log(`Attempting compression on: ${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`);
+                                uploadFile = await imageCompression(file, compressionOptions);
+                                console.log(`Result: ${uploadFile.name} (${(uploadFile.size/1024/1024).toFixed(2)} MB)`);
+                            } else {
+                                console.warn("Compression library not loaded.");
+                            }
+                        } catch (err) {
+                            console.warn("Compression failed, uploading original.", err);
+                        }
+
+                        const fileExt = "jpg"; 
+                        const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+                        
+                        const { error } = await sb.storage.from('products').upload(fileName, uploadFile);
+                        if (error) throw error;
+                        
+                        const { data } = sb.storage.from('products').getPublicUrl(fileName);
+                        imageUrls.push(data.publicUrl);
                     }
                 }
                 if(imageUrls.length === 0) throw new Error(`Variant "${varName}" needs at least one image.`);
