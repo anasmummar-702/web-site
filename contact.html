@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Us | Royal Collections</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="site-header">
+        <div class="header-main">
+            <div class="mobile-menu-toggle"><i class="fas fa-bars"></i></div>
+            <div class="brand-logo"><a href="index.html"><h1>Royal Collections</h1></a></div>
+            <nav class="main-navigation">
+                <ul class="nav-list">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="ladies.html">Ladies</a></li>
+                    <li><a href="kids.html">Kids</a></li>
+                    <li><a href="shoes.html">Footwear</a></li>
+                    <li><a href="cosmetics.html">Jewelry</a></li>
+                    <li><a href="innerwears.html">Innerwears</a></li>
+                </ul>
+            </nav>
+            <div class="header-icons">
+                <a href="cart.html" class="cart-icon"><i class="fas fa-shopping-bag"></i><span class="cart-count">0</span></a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container" style="padding-top: 60px; padding-bottom: 60px; max-width: 900px;">
+        <h1 style="font-family: var(--font-heading); margin-bottom: 30px; text-align: center;">Get in Touch</h1>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 50px; margin-top: 40px;">
+            <div>
+                <h3 style="color: var(--color-primary); margin-bottom: 20px;">Contact Information</h3>
+                <p style="color: var(--color-secondary); margin-bottom: 20px;">We'd love to hear from you. Whether you have a question about our collections, need assistance with an order, or just want to say hello.</p>
+                
+                <div style="margin-bottom: 20px;">
+                    <strong style="display: block; color: var(--color-primary);">Address</strong>
+                    <span style="color: var(--color-secondary);">Royal Collections<br>Kechery, Thrissur<br>Kerala, India</span>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <strong style="display: block; color: var(--color-primary);">Phone / WhatsApp</strong>
+                    <span style="color: var(--color-secondary);">+91 9544519131</span>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <strong style="display: block; color: var(--color-primary);">Email</strong>
+                    <span style="color: var(--color-secondary);">support@royalcollections.com</span>
+                </div>
+            </div>
+
+            <div style="background: #f8f9fa; padding: 30px; border-radius: 8px;">
+                <h3 style="color: var(--color-primary); margin-bottom: 20px;">Send a Message</h3>
+                <form action="mailto:support@royalcollections.com" method="post" enctype="text/plain">
+                    <div class="control-group">
+                        <label class="control-label">Name</label>
+                        <input type="text" name="name" class="select-input" required>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Email</label>
+                        <input type="email" name="email" class="select-input" required>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Message</label>
+                        <textarea name="message" class="select-input" rows="4" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Send Message</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <footer style="padding: 60px 0; border-top: 1px solid #eee; text-align: center;">
+        <div class="container">
+            <h2 style="font-family: var(--font-heading); margin-bottom: 20px;">Royal Collections</h2>
+            <div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 30px; font-size: 1.2rem;">
+                <a href="https://www.instagram.com/royalcollectionskechery"><i class="fab fa-instagram"></i></a>
+                <a href="https://chat.whatsapp.com/EviieXclX0g9gNL8HHV8zr"><i class="fab fa-whatsapp"></i></a>
+            </div>
+            
+            <div class="footer-links">
+                <a href="contact.html">Contact Us</a>
+                <a href="shipping.html">Shipping Policy</a>
+                <a href="cancellations.html">Cancellations & Refunds</a>
+                <a href="returns.html">Replacement Policy</a>
+                <a href="terms.html">Terms & Conditions</a>
+                <a href="privacy.html">Privacy Policy</a>
+            </div>
+
+            <p style="color: var(--color-secondary); font-size: 0.9rem;">&copy; 2025 Royal Collections. Designed for Elegance.</p>
+        </div>
+    </footer>
+    <script src="script.js"></script>
+    <style>
+        @media(max-width: 768px) {
+            .container > div { grid-template-columns: 1fr !important; }
+        }
+    </style>
+</body>
+</html>
