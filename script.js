@@ -454,7 +454,9 @@ async function handleProductSave(e) {
                     try { if (typeof imageCompression !== 'undefined') uploadFile = await imageCompression(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1280, useWebWorker: false }); } catch (err) {}
                     
                     const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.jpg`;
-                    await sb.storage.from('products').upload(fileName, uploadFile);
+                    const { error: uploadError } = await sb.storage.from('products').upload(fileName, uploadFile);
+                    if(uploadError) throw uploadError;
+                    
                     const { data } = sb.storage.from('products').getPublicUrl(fileName);
                     imageUrls.push(data.publicUrl);
                 }
@@ -489,13 +491,16 @@ async function handleProductSave(e) {
         };
         
         const id = document.getElementById('prod-id').value;
-        if (id) await sb.from('products').update(payload).eq('id', id);
-        else await sb.from('products').insert([payload]);
+        const { error: dbError } = id 
+            ? await sb.from('products').update(payload).eq('id', id)
+            : await sb.from('products').insert([payload]);
+
+        if(dbError) throw dbError;
         
         showRoyalToast("Success", "Product Saved!");
         switchAdminTab('products-list-section');
         loadAdminProducts();
-    } catch (err) { alert(err.message); } 
+    } catch (err) { alert("Error: " + err.message); } 
     finally { btn.disabled = false; btn.innerText = "Save Product"; }
 }
 
@@ -509,6 +514,43 @@ async function loadAdminOrders() {
     if(!orders || orders.length === 0) { grid.innerHTML = '<div class="empty-state">No orders found.</div>'; currentAdminOrders = []; return; }
     currentAdminOrders = orders;
     renderOrderItems(orders);
+}
+
+async function loadAdminProducts() {
+    if(!sb) return;
+    const tbody = document.getElementById('admin-products-body');
+    if(!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading Inventory...</td></tr>';
+
+    const { data: products, error } = await sb.from('products').select('*').order('id', { ascending: false });
+
+    if (error) {
+        tbody.innerHTML = `<tr><td colspan="4" style="color:var(--color-error); text-align:center;">Error loading products: ${error.message}</td></tr>`;
+        return;
+    }
+
+    if (!products || products.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No products found. Click "Add New" to start.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = products.map(p => `
+        <tr>
+            <td>
+                <div style="display:flex; align-items:center;">
+                    <img src="${p.image_url || ''}" class="admin-product-thumb" alt="img">
+                    <span style="font-weight:600;">${escapeHtml(p.name)}</span>
+                </div>
+            </td>
+            <td>${escapeHtml(p.category)}</td>
+            <td>${p.stock_quantity}</td>
+            <td style="text-align: right;">
+                <button class="btn-icon" onclick="editProduct(${p.id})" title="Edit"><i class="fas fa-edit"></i></button>
+                <button class="btn-icon delete" onclick="deleteProduct(${p.id})" title="Delete"><i class="fas fa-trash-alt"></i></button>
+            </td>
+        </tr>
+    `).join('');
 }
 
 async function renderOrderItems(orders) {
@@ -612,8 +654,9 @@ window.editProduct = async function(id) {
 
 window.deleteProduct = async function(id) { 
     if(confirm("Delete product?")) { 
-        await sb.from('products').delete().eq('id', id); 
-        loadAdminProducts(); 
+        const { error } = await sb.from('products').delete().eq('id', id); 
+        if (error) alert("Error deleting: " + error.message);
+        else loadAdminProducts(); 
     } 
 };
 
