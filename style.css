@@ -1230,7 +1230,7 @@ footer a:hover i {
 /* Premium Promotion Banner */
 .promotion-banner {
     position: relative;
-    background-image: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)), url('promo_wedding.png?v=12');
+    background-image: linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)), url('assets/images/promo_wedding.png?v=12');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
