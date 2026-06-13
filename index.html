@@ -6,7 +6,7 @@
     <title>Royal Collections | Modern Boutique</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=11.0">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -15,7 +15,7 @@
     <header class="site-header">
         <div class="header-main">
             <div class="mobile-menu-toggle"><i class="fas fa-bars"></i></div>
-            <div class="brand-logo"><a href="index.html"><h1>Royal Collections</h1></a></div>
+            <div class="brand-logo"><a href="index.html"><h1><i class="fas fa-crown" style="margin-right: 10px;"></i>Royal Collections</h1></a></div>
             <nav class="main-navigation">
                 <ul class="nav-list">
                     <li><a href="index.html" class="active">Home</a></li>
@@ -27,27 +27,224 @@
                 </ul>
             </nav>
             <div class="header-icons">
-                <a href="cart.html" class="cart-icon"><i class="fas fa-shopping-bag"></i><span class="cart-count">0</span></a>
+                <a href="notifications.html" class="notification-icon" title="Notifications">
+                    <i class="far fa-bell"></i>
+                    <span class="notification-count">0</span>
+                </a>
+                <a href="wishlist.html" class="wishlist-icon" title="Wishlist">
+                    <i class="far fa-heart"></i>
+                    <span class="wishlist-count">0</span>
+                </a>
+                <a href="cart.html" class="cart-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" width="18" height="18" fill="currentColor" style="vertical-align: -0.125em;"><path d="M160 128V80c0-26.5 21.5-48 48-48h32c26.5 0 48 21.5 48 48v48h96c26.5 0 48 21.5 48 48V432c0 26.5-21.5 48-48 48H64c-26.5 0-48-21.5-48-48V176c0-26.5 21.5-48 48-48h96zm32-48v48h64V80c0-8.8-7.2-16-16-16h-32c-8.8 0-16 7.2-16 16zm-32 96H64V432H384V176H320v32c0 8.8-7.2 16-16 16s-16-7.2-16-16V176H176v32c0 8.8-7.2 16-16 16s-16-7.2-16-16v-32zm0 112c13.3 0 24-10.7 24-24s-10.7-24-24-24s-24 10.7-24 24s10.7 24 24 24zm128-24c0 13.3 10.7 24 24 24s24-10.7 24-24s-10.7-24-24-24s-24 10.7-24 24z"/></svg>
+                    <span class="cart-count">0</span>
+                </a>
             </div>
         </div>
     </header>
 
-    <section class="page-hero home-hero">
-        <div class="page-hero-content">
-            <h2>Elegance is an Attitude</h2>
-            <p style="margin-bottom: 30px;">Discover the new season essentials handcrafted for perfection.</p>
-            <a href="#latest-arrivals" class="btn btn-primary" style="background: white; color: black; border-color: white;">Shop New Arrivals</a>
+    <section class="hero-carousel-wrapper">
+        <div class="hero-carousel">
+            <!-- Slide 1: Ladies Couture -->
+            <div class="hero-slide active" style="background-image: linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url('banner_ladies.png');">
+                <div class="hero-slide-content">
+                    <span class="slide-subtitle">Elegant couture</span>
+                    <h2>Ladies Couture</h2>
+                    <p>Refined aesthetics and timeless Indian wear handcrafted to perfection.</p>
+                    <a href="ladies.html" class="btn btn-primary btn-slide">Shop Ladies Collection</a>
+                </div>
+            </div>
+            <!-- Slide 2: Kids Wear -->
+            <div class="hero-slide" style="background-image: linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url('banner_kids.png');">
+                <div class="hero-slide-content">
+                    <span class="slide-subtitle">Playful & Premium</span>
+                    <h2>Kids Collection</h2>
+                    <p>Delightful, high-quality styles designed for play-ready luxury comfort.</p>
+                    <a href="kids.html" class="btn btn-primary btn-slide">Shop Kids Wear</a>
+                </div>
+            </div>
+            <!-- Slide 3: Footwear -->
+            <div class="hero-slide" style="background-image: linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url('banner_shoes.png');">
+                <div class="hero-slide-content">
+                    <span class="slide-subtitle">Walk in Luxury</span>
+                    <h2>Premium Footwear</h2>
+                    <p>Find the perfect fit with our exclusive designer boutique shoes.</p>
+                    <a href="shoes.html" class="btn btn-primary btn-slide">Shop Footwear</a>
+                </div>
+            </div>
+            <!-- Slide 4: Jewelry -->
+            <div class="hero-slide" style="background-image: linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url('banner_jewelry.png');">
+                <div class="hero-slide-content">
+                    <span class="slide-subtitle">Dazzle with Grace</span>
+                    <h2>Jewelry & Beauty</h2>
+                    <p>Hand-selected statement jewelry pieces and premium cosmetics essentials.</p>
+                    <a href="cosmetics.html" class="btn btn-primary btn-slide">Shop Jewelry & Cosmetics</a>
+                </div>
+            </div>
+            <!-- Slide 5: Innerwears -->
+            <div class="hero-slide" style="background-image: linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)), url('banner_innerwears.png');">
+                <div class="hero-slide-content">
+                    <span class="slide-subtitle">Premium Comfort</span>
+                    <h2>Soft Innerwears</h2>
+                    <p>Discover the finest luxury organic cotton undergarments for everyday wear.</p>
+                    <a href="innerwears.html" class="btn btn-primary btn-slide">Shop Innerwears</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Arrows -->
+        <button class="carousel-control prev" aria-label="Previous Slide"><i class="fas fa-chevron-left"></i></button>
+        <button class="carousel-control next" aria-label="Next Slide"><i class="fas fa-chevron-right"></i></button>
+
+        <!-- Carousel Indicators -->
+        <div class="carousel-indicators">
+            <span class="indicator active" data-slide="0"></span>
+            <span class="indicator" data-slide="1"></span>
+            <span class="indicator" data-slide="2"></span>
+            <span class="indicator" data-slide="3"></span>
+            <span class="indicator" data-slide="4"></span>
         </div>
     </section>
 
-    <section id="latest-arrivals" class="container" style="padding-top: 60px; padding-bottom: 60px;">
+    <!-- Feature Highlights Bar -->
+    <section class="feature-highlights-bar">
+        <div class="container highlights-container">
+            <div class="highlight-item">
+                <i class="fas fa-shipping-fast"></i>
+                <div class="highlight-info">
+                    <h4>Complimentary Shipping</h4>
+                    <p>On all orders over ₹10,000</p>
+                </div>
+            </div>
+            <div class="highlight-item">
+                <i class="fas fa-award"></i>
+                <div class="highlight-info">
+                    <h4>Premium Quality</h4>
+                    <p>Handcrafted luxury fabrics</p>
+                </div>
+            </div>
+            <div class="highlight-item">
+                <i class="fas fa-undo-alt"></i>
+                <div class="highlight-info">
+                    <h4>Easy Replacements</h4>
+                    <p>Hassle-free 7-day policy</p>
+                </div>
+            </div>
+            <div class="highlight-item">
+                <i class="fas fa-shield-alt"></i>
+                <div class="highlight-info">
+                    <h4>Secure Checkout</h4>
+                    <p>100% encrypted checkout</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Trending Categories -->
+    <section class="trending-categories container" style="padding-top: 60px;">
+        <div class="collection-header reveal">
+            <h3>Trending Categories</h3>
+            <p style="color: var(--color-secondary); margin-top: 10px;">Shop our curated premium collections</p>
+        </div>
+        <div class="categories-grid">
+            <a href="ladies.html" class="category-card reveal">
+                <div class="category-image">
+                    <img src="category_ladies.png" alt="Ladies">
+                </div>
+                <h4>Ladies Couture</h4>
+            </a>
+            <a href="kids.html" class="category-card reveal delay-1">
+                <div class="category-image">
+                    <img src="category_kids.png" alt="Kids">
+                </div>
+                <h4>Kids Wear</h4>
+            </a>
+            <a href="shoes.html" class="category-card reveal delay-2">
+                <div class="category-image">
+                    <img src="category_footwear.png" alt="Footwear">
+                </div>
+                <h4>Footwear</h4>
+            </a>
+            <a href="cosmetics.html" class="category-card reveal delay-3">
+                <div class="category-image">
+                    <img src="category_jewelry.png" alt="Jewelry">
+                </div>
+                <h4>Jewelry & Beauty</h4>
+            </a>
+            <a href="innerwears.html" class="category-card reveal delay-4">
+                <div class="category-image">
+                    <img src="category_innerwears.png" alt="Innerwears">
+                </div>
+                <h4>Innerwears</h4>
+            </a>
+        </div>
+    </section>
+
+    <!-- Latest Arrivals (Featured Products) -->
+    <section id="latest-arrivals" class="container" style="padding-top: 60px; padding-bottom: 60px; border-top: 1px solid #eee;">
         <div class="collection-header">
-            <h3>Latest Arrivals</h3>
+            <h3>Featured Products</h3>
             <p style="color: var(--color-secondary); margin-top: 10px;">Exclusively curated for you</p>
         </div>
         
         <div id="home-products-grid" class="product-grid">
-            <p style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--color-secondary);">Loading new arrivals...</p>
+            <p style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--color-secondary);">Loading arrivals...</p>
+        </div>
+    </section>
+
+    <!-- Premium Promotion Banner -->
+    <section class="promotion-banner">
+        <div class="promo-content">
+            <span class="promo-sub">Season Exclusive</span>
+            <h2>The Royal Wedding Collection</h2>
+            <p>Hand-woven silk sarees and premium bridal wear designed to showcase timeless heritage.</p>
+            <a href="ladies.html" class="btn btn-primary btn-promo">Explore The Collection</a>
+        </div>
+    </section>
+
+    <!-- Voices of Elegance (Social Proof) -->
+    <section class="social-proof container" style="padding-top: 80px; padding-bottom: 80px;">
+        <div class="collection-header">
+            <h3>Voices of Elegance</h3>
+            <p style="color: var(--color-secondary); margin-top: 10px;">Hear from our esteemed clientele</p>
+        </div>
+        <div class="testimonials-grid">
+            <div class="testimonial-card">
+                <div class="testimonial-stars">
+                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                </div>
+                <p class="testimonial-text">"The silk sarees from Royal Collections are absolutely breathtaking. The fabric quality and craftsmanship are unmatched. Highly recommended!"</p>
+                <h4 class="testimonial-author">Priyanka R.</h4>
+                <span class="testimonial-location">Verified Buyer, Mumbai</span>
+            </div>
+            <div class="testimonial-card">
+                <div class="testimonial-stars">
+                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                </div>
+                <p class="testimonial-text">"Outstanding customer service. They helped me choose sizes over WhatsApp, and the kids frock fits my daughter perfectly."</p>
+                <h4 class="testimonial-author">Meera K.</h4>
+                <span class="testimonial-location">Verified Buyer, Kochi</span>
+            </div>
+            <div class="testimonial-card">
+                <div class="testimonial-stars">
+                    <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                </div>
+                <p class="testimonial-text">"Super fast delivery and secure payments. The boutique has become my go-to place for all festive shopping."</p>
+                <h4 class="testimonial-author">Aishwarya S.</h4>
+                <span class="testimonial-location">Verified Buyer, Bangalore</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Recently Viewed -->
+    <section id="recently-viewed" class="container" style="padding-top: 60px; padding-bottom: 60px; border-top: 1px solid #eee; display: none;">
+        <div class="collection-header">
+            <h3>Recently Viewed</h3>
+            <p style="color: var(--color-secondary); margin-top: 10px;">Pick up where you left off</p>
+        </div>
+        
+        <div id="recently-viewed-products-grid" class="product-grid">
+            <!-- Populated via Javascript -->
         </div>
     </section>
 
@@ -83,6 +280,6 @@
             <p style="color: var(--color-secondary); font-size: 0.9rem;">&copy; 2025 Royal Collections. Designed for Elegance.</p>
         </div>
     </footer>
-    <script src="script.js"></script>
+    <script src="script.js?v=11.0"></script>
 </body>
 </html>

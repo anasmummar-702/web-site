@@ -6,14 +6,76 @@
     <title>Product Details | Royal Collections</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=11.0">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Gallery Nav Arrows overlaying the main image */
+        .gallery-nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            color: #121212;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 5;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+        }
+        .gallery-nav-btn:hover {
+            background: #121212;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .gallery-nav-btn.prev-btn {
+            left: 15px;
+        }
+        .gallery-nav-btn.next-btn {
+            right: 15px;
+        }
+        
+        /* Thumbnails Styling overrides for premium look */
+        .product-thumbnails {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        .thumb-item {
+            width: 60px;
+            height: 75px;
+            border: 2px solid transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            object-fit: cover;
+            padding: 0;
+            opacity: 0.6;
+            transition: all 0.25s ease;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        }
+        .thumb-item:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        .thumb-item.active {
+            border-color: #065184; /* Theme accent color */
+            opacity: 1;
+            box-shadow: 0 4px 12px rgba(6, 81, 132, 0.15);
+        }
+    </style>
 </head>
 <body>
     <header class="site-header">
         <div class="header-main">
             <div class="mobile-menu-toggle"><i class="fas fa-bars"></i></div>
-            <div class="brand-logo"><a href="index.html"><h1>Royal Collections</h1></a></div>
+            <div class="brand-logo"><a href="index.html"><h1><i class="fas fa-crown"></i><span class="logo-text">Royal Collections</span></h1></a></div>
             <nav class="main-navigation">
                 <ul class="nav-list">
                     <li><a href="index.html">Home</a></li>
@@ -25,7 +87,19 @@
                 </ul>
             </nav>
             <div class="header-icons">
-                <a href="cart.html" class="cart-icon"><i class="fas fa-shopping-bag"></i><span class="cart-count">0</span></a>
+                <a href="#" class="search-icon-header" title="Search"><i class="fas fa-search"></i></a>
+                <a href="notifications.html" class="notification-icon" title="Notifications">
+                    <i class="far fa-bell"></i>
+                    <span class="notification-count">0</span>
+                </a>
+                <a href="wishlist.html" class="wishlist-icon" title="Wishlist">
+                    <i class="far fa-heart"></i>
+                    <span class="wishlist-count">0</span>
+                </a>
+                <a href="cart.html" class="cart-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" width="18" height="18" fill="currentColor" style="vertical-align: -0.125em;"><path d="M160 128V80c0-26.5 21.5-48 48-48h32c26.5 0 48 21.5 48 48v48h96c26.5 0 48 21.5 48 48V432c0 26.5-21.5 48-48 48H64c-26.5 0-48-21.5-48-48V176c0-26.5 21.5-48 48-48h96zm32-48v48h64V80c0-8.8-7.2-16-16-16h-32c-8.8 0-16 7.2-16 16zm-32 96H64V432H384V176H320v32c0 8.8-7.2 16-16 16s-16-7.2-16-16V176H176v32c0 8.8-7.2 16-16 16s-16-7.2-16-16v-32zm0 112c13.3 0 24-10.7 24-24s-10.7-24-24-24s-24 10.7-24 24s10.7 24 24 24zm128-24c0 13.3 10.7 24 24 24s24-10.7 24-24s-10.7-24-24-24s-24 10.7-24 24z"/></svg>
+                    <span class="cart-count">0</span>
+                </a>
             </div>
         </div>
     </header>
@@ -40,19 +114,54 @@
         <div class="product-layout">
             <!-- Gallery Section -->
             <div class="product-gallery-wrapper">
-                <div class="product-main-image">
-                    <img id="detail-img" src="" alt="Product Image">
+                <div class="product-main-image-container">
+                    <button id="prev-img-btn" class="gallery-nav-btn prev-btn" aria-label="Previous image" style="display: none;">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <div class="product-main-image" style="width: 100%; height: 100%;">
+                        <img id="detail-img" src="" alt="Product Image">
+                    </div>
+                    <button id="next-img-btn" class="gallery-nav-btn next-btn" aria-label="Next image" style="display: none;">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                    <!-- Floating circular action buttons -->
+                    <div class="floating-image-actions">
+                        <button id="add-to-wishlist-btn" class="circle-action-btn" title="Add to Wishlist">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <button id="img-share-btn" class="circle-action-btn" title="Share Product">
+                            <i class="fas fa-share-alt"></i>
+                        </button>
+                        <button id="img-zoom-btn" class="circle-action-btn" title="Zoom Image">
+                            <i class="fas fa-search-plus"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="product-thumbnails" id="gallery-thumbs">
-                    <!-- Thumbnails -->
-                </div>
+                <!-- Thumbnails Container -->
+                <div class="product-thumbnails" id="product-thumbnails-container" style="display: none;"></div>
+                <!-- Carousel dot indicators -->
+                <div class="carousel-dots" id="carousel-dots-container" style="display: none;"></div>
             </div>
 
             <!-- Details Section -->
             <div class="product-info-col">
                 <div style="text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; color: var(--color-secondary); margin-bottom: 5px;" id="detail-cat-tag"></div>
-                <h1 id="detail-title">Loading...</h1>
-                <div class="price-tag" id="detail-price"></div>
+                <h1 id="detail-title" class="product-detail-title">Loading...</h1>
+                
+                <div class="product-price-rating-row">
+                    <div class="price-col-detail">
+                        <span class="price-tag" id="detail-price"></span>
+                        <span id="detail-price-orig" style="color: #999; text-decoration: line-through; margin-left: 8px;"></span>
+                        <span id="detail-discount-badge" class="card-offer-badge" style="position: static; display: none; margin-left: 8px;"></span>
+                    </div>
+                    <div class="rating-col-detail">
+                        <span class="rating-stars-val"><span id="detail-rating-number">4.6</span> <i class="fas fa-star" style="color: #f39c12; font-size: 0.9rem;"></i></span>
+                        <span id="detail-reviews-count" class="reviews-count-val">(128 reviews)</span>
+                    </div>
+                </div>
+
+                <div class="product-attributes-row" id="detail-attributes-row"></div>
+                
                 <div class="desc-text" id="detail-desc"></div>
 
                 <div style="background: white; border: 1px solid #eee; padding: 25px; border-radius: 8px;">
@@ -64,21 +173,33 @@
                     </div>
 
                     <!-- SIZE SELECTOR -->
-                    <div class="control-group">
-                        <label class="control-label">Select Size</label>
-                        <select id="detail-size" class="select-input" disabled>
-                            <option>Select Option first</option>
-                        </select>
+                    <div class="control-group" id="size-selector-group">
+                        <div class="size-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <label class="control-label" style="margin-bottom: 0;">Select Size</label>
+                            <a href="#" class="size-guide-link" id="size-guide-trigger">Size Guide</a>
+                        </div>
+                        <div id="size-buttons-container" class="mockup-size-buttons-container"></div>
                     </div>
 
                     <span id="stock-indicator" class="stock-status"></span>
 
                     <div class="control-group">
                         <label class="control-label">Quantity</label>
-                        <input type="number" id="detail-qty" class="qty-input" value="1" min="1">
+                        <div class="quantity-selector">
+                            <button type="button" class="qty-btn" id="qty-minus-btn">−</button>
+                            <input type="number" id="detail-qty" class="qty-val" value="1" min="1" readonly style="border: none; background: transparent; pointer-events: none; width: 40px; text-align: center;">
+                            <button type="button" class="qty-btn" id="qty-plus-btn">+</button>
+                        </div>
                     </div>
 
-                    <button id="add-to-cart-btn" class="btn btn-primary" style="width: 100%;">Add to Bag</button>
+                    <div class="detail-actions-row">
+                        <button id="add-to-cart-btn" class="btn btn-primary btn-add-to-bag">
+                            <i class="fas fa-shopping-bag" style="margin-right: 8px;"></i>ADD TO BAG
+                        </button>
+                        <button id="btn-buy" class="btn btn-outline-dark btn-buy-now">
+                            BUY NOW
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="meta-features">
@@ -110,6 +231,6 @@
             <p style="color: var(--color-secondary); font-size: 0.9rem;">&copy; 2025 Royal Collections. Designed for Elegance.</p>
         </div>
     </footer>
-    <script src="script.js"></script>
+    <script src="script.js?v=12.0"></script>
 </body>
 </html>

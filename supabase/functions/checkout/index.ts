@@ -61,7 +61,7 @@ serve(async (req) => {
     if (action === 'create_order') {
       if (!Array.isArray(cartItems) || cartItems.length === 0) throw new Error('Invalid cart')
 
-      let totalAmount = 0
+      let totalAmount = 50
       
       for (const item of cartItems) {
         if (!Number.isInteger(item.qty) || item.qty <= 0) throw new Error(`Invalid quantity`)
