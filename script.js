@@ -20,6 +20,7 @@ window.addEventListener('load', () => {
     if (typeof supabase !== 'undefined') {
         const { createClient } = supabase;
         sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+        window.sb = sb; // Bind to window so it is accessible globally in production/hosted builds
         try {
             sb.auth.onAuthStateChange((event, session) => {
                 if (session && session.user) {
