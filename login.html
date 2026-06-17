@@ -199,15 +199,15 @@
         // Check local storage messages on load and auto-redirect if already logged in
         window.addEventListener('load', async () => {
             // Wait a brief moment to ensure Supabase client in script.js?v=44.0 is initialized
-            if (!sb) {
+            if (!window.sb) {
                 await new Promise(resolve => setTimeout(resolve, 300));
             }
             
-            if (sb) {
+            if (window.sb) {
                 try {
-                    const { data: { session } } = await sb.auth.getSession();
+                    const { data: { session } } = await window.sb.auth.getSession();
                     if (session) {
-                        const { data: isAdmin } = await sb.rpc('is_admin');
+                        const { data: isAdmin } = await window.sb.rpc('is_admin');
                         if (isAdmin) {
                             window.location.href = 'admin.html';
                         } else {
@@ -251,7 +251,7 @@
             btn.disabled = true;
             btn.textContent = 'Signing In...';
             
-            if (!sb) {
+            if (!window.sb) {
                 if (typeof showRoyalToast === 'function') {
                     showRoyalToast('Connection Error', 'Connecting to database... Please wait.', true);
                 } else {
@@ -263,7 +263,7 @@
             }
             
             try {
-                const { data, error } = await sb.auth.signInWithPassword({
+                const { data, error } = await window.sb.auth.signInWithPassword({
                     email,
                     password
                 });
@@ -284,7 +284,7 @@
                 } else {
                     // Check if the user is an admin and redirect to admin dashboard
                     try {
-                        const { data: isAdmin } = await sb.rpc('is_admin');
+                        const { data: isAdmin } = await window.sb.rpc('is_admin');
                         if (isAdmin) {
                             window.location.href = 'admin.html';
                             return;
@@ -316,10 +316,10 @@
 
         // Verification helper: check if user holds account with this email
         async function verifyEmailExists(email) {
-            if (!sb) return false;
+            if (!window.sb) return false;
             
             // Step 1: Check if this email has placed any orders in public orders table
-            const { data: orderData } = await sb.from('orders')
+            const { data: orderData } = await window.sb.from('orders')
                 .select('customer_email')
                 .eq('customer_email', email)
                 .limit(1);
@@ -329,7 +329,7 @@
             
             // Step 2: Try signing up with a random password to check user existence
             try {
-                const { data, error } = await sb.auth.signUp({
+                const { data, error } = await window.sb.auth.signUp({
                     email: email,
                     password: 'VerificationDummyPasswordTemp123!@#$'
                 });
@@ -372,7 +372,7 @@
                     return;
                 }
 
-                if (!sb) {
+                if (!window.sb) {
                     if (typeof showRoyalToast === 'function') {
                         showRoyalToast('Connection Error', 'Connecting to database... Please wait.', true);
                     } else {
@@ -403,7 +403,7 @@
 
                     // Email is verified, proceed to send reset link
                     const resetRedirectUrl = window.location.origin + window.location.pathname.replace('login.html', 'reset-password.html');
-                    const { error } = await sb.auth.resetPasswordForEmail(email, {
+                    const { error } = await window.sb.auth.resetPasswordForEmail(email, {
                         redirectTo: resetRedirectUrl
                     });
 

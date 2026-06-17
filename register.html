@@ -214,7 +214,7 @@
             btn.disabled = true;
             btn.textContent = 'Creating Account...';
             
-            if (!sb) {
+            if (!window.sb) {
                 if (typeof showRoyalToast === 'function') {
                     showRoyalToast('Connection Error', 'Connecting to database... Please wait.', true);
                 } else {
@@ -226,7 +226,7 @@
             }
             
             try {
-                const { data, error } = await sb.auth.signUp({
+                const { data, error } = await window.sb.auth.signUp({
                     email,
                     password,
                     options: {
