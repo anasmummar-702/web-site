@@ -6,7 +6,7 @@
     <title>Sign In | Royal Collections</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=11.0">
+    <link rel="stylesheet" href="style.css?v=43.0">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         .auth-container {
@@ -145,24 +145,30 @@
 
     <div class="auth-container">
         <div class="auth-card">
-            <h2 class="auth-title">Sign In</h2>
-            <p class="auth-subtitle">Access your account, orders, and wishlist</p>
-            
-            <form id="login-form">
-                <div class="form-group">
-                    <label class="form-label" for="login-email">Email Address</label>
-                    <input type="email" id="login-email" class="form-input" placeholder="e.g. john@example.com" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="login-password">Password</label>
-                    <input type="password" id="login-password" class="form-input" placeholder="Enter your password" required>
-                </div>
+            <!-- View: Sign In Form -->
+            <div id="login-view">
+                <h2 class="auth-title">Sign In</h2>
+                <p class="auth-subtitle">Access your account, orders, and wishlist</p>
                 
-                <button type="submit" id="login-btn" class="btn-auth">Sign In</button>
-            </form>
-            
-            <div class="auth-footer">
-                Don't have an account? <a href="register.html" class="auth-link">Create Account</a>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label class="form-label" for="login-email">Email Address</label>
+                        <input type="email" id="login-email" class="form-input" placeholder="e.g. john@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="login-password">Password</label>
+                        <input type="password" id="login-password" class="form-input" placeholder="Enter your password" required>
+                        <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
+                            <a href="#" id="forgot-password-link" class="auth-link" style="display: none; font-size: 0.8rem; font-weight: 500;">Forgot Password?</a>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" id="login-btn" class="btn-auth">Sign In</button>
+                </form>
+                
+                <div class="auth-footer">
+                    Don't have an account? <a href="register.html" class="auth-link">Create Account</a>
+                </div>
             </div>
         </div>
     </div>
@@ -188,11 +194,11 @@
         </div>
     </footer>
 
-    <script src="script.js?v=11.0"></script>
+    <script src="script.js?v=43.0"></script>
     <script>
         // Check local storage messages on load and auto-redirect if already logged in
         window.addEventListener('load', async () => {
-            // Wait a brief moment to ensure Supabase client in script.js?v=11.0 is initialized
+            // Wait a brief moment to ensure Supabase client in script.js?v=43.0 is initialized
             if (!sb) {
                 await new Promise(resolve => setTimeout(resolve, 300));
             }
@@ -234,6 +240,8 @@
             }
         });
 
+        let loginFailures = 0;
+
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('login-email').value.trim();
@@ -261,6 +269,11 @@
                 });
                 
                 if (error) {
+                    loginFailures++;
+                    if (loginFailures > 2) {
+                        const forgotLink = document.getElementById('forgot-password-link');
+                        if (forgotLink) forgotLink.style.display = 'block';
+                    }
                     if (typeof showRoyalToast === 'function') {
                         showRoyalToast('Sign In Failed', error.message, true);
                     } else {
@@ -286,6 +299,11 @@
                     window.location.href = redirectUrl;
                 }
             } catch (err) {
+                loginFailures++;
+                if (loginFailures > 2) {
+                    const forgotLink = document.getElementById('forgot-password-link');
+                    if (forgotLink) forgotLink.style.display = 'block';
+                }
                 if (typeof showRoyalToast === 'function') {
                     showRoyalToast('Sign In Error', err.message, true);
                 } else {
@@ -295,6 +313,125 @@
                 btn.textContent = 'Sign In';
             }
         });
+
+        // Verification helper: check if user holds account with this email
+        async function verifyEmailExists(email) {
+            if (!sb) return false;
+            
+            // Step 1: Check if this email has placed any orders in public orders table
+            const { data: orderData } = await sb.from('orders')
+                .select('customer_email')
+                .eq('customer_email', email)
+                .limit(1);
+            if (orderData && orderData.length > 0) {
+                return true;
+            }
+            
+            // Step 2: Try signing up with a random password to check user existence
+            try {
+                const { data, error } = await sb.auth.signUp({
+                    email: email,
+                    password: 'VerificationDummyPasswordTemp123!@#$'
+                });
+                
+                if (error) {
+                    // Supabase returns 400 or 422 with user_already_exists if user already has an account
+                    if (error.message.toLowerCase().includes('already') || error.status === 400 || error.status === 422) {
+                        return true; 
+                    }
+                    return false;
+                }
+                
+                // If Supabase successfully created a user (data.user has identity length > 0), it means the user was NOT registered.
+                if (data && data.user && data.user.identities && data.user.identities.length > 0) {
+                    return false;
+                }
+                
+                return false;
+            } catch (err) {
+                return false;
+            }
+        }
+
+        // Forgot password click logic
+        const forgotLink = document.getElementById('forgot-password-link');
+        if (forgotLink) {
+            forgotLink.addEventListener('click', async (e) => {
+                e.preventDefault();
+                
+                const emailInput = document.getElementById('login-email');
+                const email = emailInput.value.trim();
+                
+                if (!email) {
+                    if (typeof showRoyalToast === 'function') {
+                        showRoyalToast('Email Required', 'Please enter your email address in the Email Address field first.', true);
+                    } else {
+                        alert('Please enter your email address in the Email Address field first.');
+                    }
+                    emailInput.focus();
+                    return;
+                }
+
+                if (!sb) {
+                    if (typeof showRoyalToast === 'function') {
+                        showRoyalToast('Connection Error', 'Connecting to database... Please wait.', true);
+                    } else {
+                        alert('Supabase client not initialized.');
+                    }
+                    return;
+                }
+
+                // Show visual feedback that verification is in progress
+                forgotLink.style.pointerEvents = 'none';
+                forgotLink.innerText = 'Verifying...';
+                if (typeof showRoyalToast === 'function') {
+                    showRoyalToast('Verifying Email', 'Verifying if this email holds a registered account...', false);
+                }
+
+                try {
+                    const exists = await verifyEmailExists(email);
+                    if (!exists) {
+                        if (typeof showRoyalToast === 'function') {
+                            showRoyalToast('Account Not Found', 'This email address is not registered with us.', true);
+                        } else {
+                            alert('This email address is not registered with us.');
+                        }
+                        forgotLink.style.pointerEvents = 'auto';
+                        forgotLink.innerText = 'Forgot Password?';
+                        return;
+                    }
+
+                    // Email is verified, proceed to send reset link
+                    const resetRedirectUrl = window.location.origin + window.location.pathname.replace('login.html', 'reset-password.html');
+                    const { error } = await sb.auth.resetPasswordForEmail(email, {
+                        redirectTo: resetRedirectUrl
+                    });
+
+                    if (error) {
+                        if (typeof showRoyalToast === 'function') {
+                            showRoyalToast('Request Failed', error.message, true);
+                        } else {
+                            alert(error.message);
+                        }
+                    } else {
+                        if (typeof showRoyalToast === 'function') {
+                            showRoyalToast('Reset Email Sent', 'Check your email inbox for the reset password link.', false);
+                        } else {
+                            alert('Check your email inbox for the reset password link.');
+                        }
+                    }
+                } catch (err) {
+                    if (typeof showRoyalToast === 'function') {
+                        showRoyalToast('Request Error', err.message, true);
+                    } else {
+                        alert(err.message);
+                    }
+                } finally {
+                    forgotLink.style.pointerEvents = 'auto';
+                    forgotLink.innerText = 'Forgot Password?';
+                }
+            });
+        }
     </script>
 </body>
 </html>

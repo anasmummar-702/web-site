@@ -6,7 +6,7 @@
     <title>Notifications | Royal Collections</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=11.0">
+    <link rel="stylesheet" href="style.css?v=43.0">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body {
@@ -305,15 +305,6 @@
     <div class="notifications-card">
         <div class="card-header-row">
             <span class="unread-status-title" id="unread-status-text">0 Unread Notifications</span>
-            <div class="filter-wrapper">
-                <span>Filter</span>
-                <select id="notification-filter" class="filter-select" onchange="initNotificationsPage()">
-                    <option value="all">All</option>
-                    <option value="unread">Unread</option>
-                    <option value="promo">Offers</option>
-                    <option value="shipping">Updates</option>
-                </select>
-            </div>
             <button class="mark-all-btn" onclick="markAllNotificationsRead()">
                 Mark all as read <i class="far fa-check-circle"></i>
             </button>
@@ -345,6 +336,6 @@
         </div>
     </footer>
 
-    <script src="script.js?v=12.0"></script>
+    <script src="script.js?v=43.0"></script>
 </body>
 </html>

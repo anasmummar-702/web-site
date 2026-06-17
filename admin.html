@@ -6,10 +6,12 @@
     <title>Admin Dashboard | Royal Collections</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=11.0">
+    <link rel="stylesheet" href="style.css?v=43.0">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
     <style>body { background-color: #f8fafc; }</style>
 </head>
 <body>
@@ -209,6 +211,42 @@
                             <p>Add options like Color or Style. Each option can have its own image gallery and size list.</p>
                         </div>
 
+                        <!-- AI Analyzer Dashboard Tools -->
+                        <div class="ai-analyzer-container">
+                            <!-- Single Image AI Analyzer Card -->
+                            <div class="ai-card">
+                                <div class="ai-card-title">
+                                    <i class="fas fa-pencil-alt"></i> AI FABRIC & COLOR ANALYZER
+                                </div>
+                                <p class="ai-card-desc">
+                                    Upload a product image to extract the cloth color and generate fabric details using Client-Side AI (Free).
+                                </p>
+                                <div id="ai-drag-drop-zone" class="ai-upload-box" onclick="document.getElementById('ai-single-file-input').click()">
+                                    <input type="file" id="ai-single-file-input" style="display: none;" accept="image/*" onchange="window.handleAiFabricUpload(this)">
+                                    <span>
+                                        <i class="fas fa-search"></i> ANALYZE SINGLE IMAGE
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Batch AI Auto-Group Card -->
+                            <div class="ai-card">
+                                <div class="ai-card-title">
+                                    <i class="fas fa-pencil-alt"></i> SMART AI AUTO-GROUP IMAGES
+                                </div>
+                                <p class="ai-card-desc">
+                                    Upload a batch of product images. The system will detect their dominant colors, automatically group matching colors under single variants, and build the variant structures with previews.
+                                </p>
+                                <div class="ai-upload-box" onclick="document.getElementById('ai-batch-file-input').click()">
+                                    <input type="file" id="ai-batch-file-input" style="display: none;" accept="image/*" multiple onchange="window.handleAiBatchUpload(this)">
+                                    <span>
+                                        <i class="fas fa-images"></i> CHOOSE IMAGES TO AUTO-GROUP
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="ai-upload-status" style="display: none;"></div>
+
                         <div id="variants-container"></div>
 
                         <button type="button" class="btn btn-dashed" onclick="addVariantBlock()">
@@ -228,8 +266,10 @@
         <div class="variant-block">
             <div class="variant-header">
                 <span class="drag-handle"><i class="fas fa-grip-lines"></i></span>
-                <div class="control-group" style="margin:0; flex-grow:1;">
-                    <input type="text" class="variant-name-input select-input" required placeholder="Variant Name (e.g. Red, Striped)">
+                <div class="control-group" style="margin:0; flex-grow:1; display:flex; align-items:center; gap:8px;">
+                    <span class="variant-color-preview" style="width:24px; height:24px; border-radius:50%; border:1px solid #cbd5e1; display:none; flex-shrink:0;"></span>
+                    <input type="hidden" class="variant-hex-input">
+                    <input type="text" class="variant-name-input select-input" required placeholder="Variant Name (e.g. Red, Striped)" style="flex-grow: 1;">
                 </div>
                 <button type="button" class="btn-icon delete" onclick="this.closest('.variant-block').remove()"><i class="fas fa-trash-alt"></i></button>
             </div>
@@ -271,6 +311,51 @@
         </div>
     </template>
 
-    <script src="script.js?v=11.0"></script>
+    <!-- AI Analysis Modal -->
+    <div id="ai-analysis-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 500px; padding: 25px;">
+            <div class="close-modal" onclick="closeAiModal()">&times;</div>
+            <h3 style="margin-bottom: 20px; font-family: var(--font-heading); display: flex; align-items: center; gap: 8px; color: var(--color-primary); border-bottom: 1px solid var(--color-border); padding-bottom: 10px;">
+                <i class="fas fa-pencil-alt"></i> AI Image Analysis
+            </h3>
+            
+            <div style="text-align: center; margin-bottom: 20px;">
+                <img id="ai-modal-image-preview" src="" style="max-width: 100%; max-height: 200px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); display: none; margin: 0 auto;">
+            </div>
+
+            <!-- Primary Color Group -->
+            <div class="control-group" style="margin-bottom: 15px;">
+                <label class="control-label">Detected Cloth Color</label>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span id="ai-modal-color-swatch" style="width: 24px; height: 24px; border-radius: 50%; border: 1px solid #cbd5e1; display: inline-block; flex-shrink: 0; background-color: transparent;"></span>
+                    <input type="text" id="ai-modal-color-name" class="select-input" style="flex: 2;" placeholder="Color Name">
+                    <input type="text" id="ai-modal-color-hex" class="select-input" style="flex: 1; text-align: center; font-family: monospace;" placeholder="#000000">
+                </div>
+            </div>
+
+            <!-- Secondary Color Group (optional) -->
+            <div id="ai-modal-secondary-group" class="control-group" style="margin-bottom: 15px; display: none;">
+                <label class="control-label">Secondary Detected Color</label>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span id="ai-modal-secondary-swatch" style="width: 24px; height: 24px; border-radius: 50%; border: 1px solid #cbd5e1; display: inline-block; flex-shrink: 0; background-color: transparent;"></span>
+                    <input type="text" id="ai-modal-secondary-name" class="select-input" style="flex: 2;" placeholder="Secondary Color">
+                    <input type="text" id="ai-modal-secondary-hex" class="select-input" style="flex: 1; text-align: center; font-family: monospace;" placeholder="#000000">
+                </div>
+            </div>
+
+            <!-- Fabric Description Group -->
+            <div class="control-group" style="margin-bottom: 20px;">
+                <label class="control-label">Fabric & Details Description</label>
+                <textarea id="ai-modal-fabric-desc" class="select-input" rows="4" style="resize: vertical;" placeholder="Analyzing..."></textarea>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 25px;">
+                <button type="button" class="btn btn-outline-dark" onclick="closeAiModal()" style="padding: 10px 20px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.8rem;">Close</button>
+                <button type="button" class="btn btn-primary" onclick="copyAiDetailsToDescription()" style="padding: 10px 20px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.8rem; background: #111; border-color: #111;">Append to Description</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js?v=43.0"></script>
 </body>
 </html>

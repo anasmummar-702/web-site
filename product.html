@@ -6,7 +6,7 @@
     <title>Product Details | Royal Collections</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=11.0">
+    <link rel="stylesheet" href="style.css?v=43.0">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         /* Gallery Nav Arrows overlaying the main image */
@@ -87,7 +87,6 @@
                 </ul>
             </nav>
             <div class="header-icons">
-                <a href="#" class="search-icon-header" title="Search"><i class="fas fa-search"></i></a>
                 <a href="notifications.html" class="notification-icon" title="Notifications">
                     <i class="far fa-bell"></i>
                     <span class="notification-count">0</span>
@@ -124,16 +123,12 @@
                     <button id="next-img-btn" class="gallery-nav-btn next-btn" aria-label="Next image" style="display: none;">
                         <i class="fas fa-chevron-right"></i>
                     </button>
-                    <!-- Floating circular action buttons -->
                     <div class="floating-image-actions">
                         <button id="add-to-wishlist-btn" class="circle-action-btn" title="Add to Wishlist">
                             <i class="far fa-heart"></i>
                         </button>
                         <button id="img-share-btn" class="circle-action-btn" title="Share Product">
                             <i class="fas fa-share-alt"></i>
-                        </button>
-                        <button id="img-zoom-btn" class="circle-action-btn" title="Zoom Image">
-                            <i class="fas fa-search-plus"></i>
                         </button>
                     </div>
                 </div>
@@ -172,11 +167,9 @@
                         <div id="variant-buttons-container" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
                     </div>
 
-                    <!-- SIZE SELECTOR -->
                     <div class="control-group" id="size-selector-group">
                         <div class="size-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <label class="control-label" style="margin-bottom: 0;">Select Size</label>
-                            <a href="#" class="size-guide-link" id="size-guide-trigger">Size Guide</a>
                         </div>
                         <div id="size-buttons-container" class="mockup-size-buttons-container"></div>
                     </div>
@@ -211,6 +204,46 @@
         </div>
     </section>
 
+    <!-- Comments & Reviews Section -->
+    <section class="container" style="border-top: 1px solid #eee; padding-top: 50px; padding-bottom: 80px; margin-top: 40px;">
+        <div class="comments-section-wrapper">
+            <!-- Left Column: Reviews list -->
+            <div class="comments-list-col">
+                <h3 style="font-family: var(--font-heading); font-size: 1.8rem; margin-bottom: 30px;">Customer Reviews</h3>
+                <div id="product-comments-list">
+                    <!-- Loaded dynamically via script.js?v=43.0 -->
+                </div>
+            </div>
+            
+            <!-- Right Column: Add review form -->
+            <div class="comments-form-col" style="background: var(--color-bg-secondary); padding: 30px; border-radius: 12px; box-shadow: var(--shadow-sm); height: fit-content;">
+                <h4 style="font-family: var(--font-heading); font-size: 1.3rem; margin-bottom: 20px;">Write a Review</h4>
+                <form id="product-comment-form">
+                    <div class="control-group">
+                        <label class="control-label">Your Name</label>
+                        <input type="text" id="comment-author" class="select-input" required placeholder="e.g. Aishwarya S.">
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Rating</label>
+                        <div class="rating-stars-input" id="rating-stars-input-container" style="display: flex; gap: 8px; font-size: 1.3rem; cursor: pointer; margin-bottom: 5px;">
+                            <i class="fas fa-star" data-value="1"></i>
+                            <i class="fas fa-star" data-value="2"></i>
+                            <i class="fas fa-star" data-value="3"></i>
+                            <i class="fas fa-star" data-value="4"></i>
+                            <i class="fas fa-star" data-value="5"></i>
+                        </div>
+                        <input type="hidden" id="comment-rating" value="5">
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Your Comments</label>
+                        <textarea id="comment-text" class="select-input" rows="4" required placeholder="Share your experience with this product..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; border-radius: 6px;">Submit Review</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
     <footer style="padding: 60px 0; border-top: 1px solid #eee; text-align: center;">
         <div class="container">
             <h2 style="font-family: var(--font-heading); margin-bottom: 20px;">Royal Collections</h2>
@@ -231,6 +264,6 @@
             <p style="color: var(--color-secondary); font-size: 0.9rem;">&copy; 2025 Royal Collections. Designed for Elegance.</p>
         </div>
     </footer>
-    <script src="script.js?v=12.0"></script>
+    <script src="script.js?v=43.0"></script>
 </body>
 </html>

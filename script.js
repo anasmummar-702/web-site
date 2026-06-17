@@ -6,6 +6,8 @@ let cart = [];
 let currentAdminOrders = [];
 let wishlist = [];
 let notifications = [];
+let currentNotificationsKey = 'royal_notifications';
+let isUserLoggedIn = false;
 
 window.addEventListener('load', () => {
     // Inject high-priority image cover and anchor constraint styles to completely bypass CSS caching
@@ -18,6 +20,24 @@ window.addEventListener('load', () => {
     if (typeof supabase !== 'undefined') {
         const { createClient } = supabase;
         sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+        try {
+            sb.auth.onAuthStateChange((event, session) => {
+                if (session && session.user) {
+                    currentNotificationsKey = `royal_notifications_${session.user.id}`;
+                    isUserLoggedIn = true;
+                } else {
+                    currentNotificationsKey = 'royal_notifications';
+                    isUserLoggedIn = false;
+                }
+                loadNotifications();
+                updateNotificationsCount();
+                if (window.location.pathname.includes('notifications')) {
+                    initNotificationsPage();
+                }
+            });
+        } catch(e) {
+            console.error("Auth state change subscription error:", e);
+        }
     } 
 
     try {
@@ -40,6 +60,12 @@ window.addEventListener('load', () => {
     else if (path.includes('notifications')) initNotificationsPage();
     else if (path.includes('index') || path === '/' || path.endsWith('/')) initHomePage();
     else initListingPage();
+
+    try {
+        if (typeof updateChatbotVisibility === 'function') {
+            updateChatbotVisibility();
+        }
+    } catch(e) {}
 });
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -50,6 +76,25 @@ document.addEventListener('DOMContentLoaded', () => {
         document.addEventListener('click', (e) => { 
             if (nav.classList.contains('open') && !nav.contains(e.target) && !mobileToggle.contains(e.target)) nav.classList.remove('open'); 
         });
+    }
+
+    // Dynamically add mobile-only navigation links for Wishlist and Notifications
+    const navList = document.querySelector('.nav-list');
+    if (navList) {
+        const path = window.location.pathname;
+        
+        const wishlistLi = document.createElement('li');
+        wishlistLi.className = 'mobile-only-nav';
+        const wishlistActive = path.includes('wishlist.html') ? 'class="active"' : '';
+        wishlistLi.innerHTML = `<a href="wishlist.html" ${wishlistActive}>Wishlist</a>`;
+        
+        const notificationsLi = document.createElement('li');
+        notificationsLi.className = 'mobile-only-nav';
+        const notificationsActive = path.includes('notifications.html') ? 'class="active"' : '';
+        notificationsLi.innerHTML = `<a href="notifications.html" ${notificationsActive}>Notifications</a>`;
+        
+        navList.appendChild(wishlistLi);
+        navList.appendChild(notificationsLi);
     }
 });
 
@@ -198,13 +243,41 @@ function saveCart() {
     updateCartCount();
 }
 
-function addToCart(id, name, price, img, maxStock, qty, size, variantName) {
+async function addToCart(id, name, price, img, maxStock, qty, size, variantName) {
+    if (!isUserLoggedIn) {
+        // Double check session to avoid race conditions
+        if (sb) {
+            try {
+                const { data: { session } } = await sb.auth.getSession();
+                if (session && session.user) {
+                    isUserLoggedIn = true;
+                    currentNotificationsKey = `royal_notifications_${session.user.id}`;
+                    loadNotifications();
+                    updateNotificationsCount();
+                }
+            } catch(e) {}
+        }
+    }
+
+    if (!isUserLoggedIn) {
+        showRoyalConfirm(
+            "Sign In Required",
+            "Please sign in or sign up to add items to your bag and start shopping.",
+            () => {
+                localStorage.setItem('login_redirect', window.location.href);
+                window.location.href = 'login.html';
+            }
+        );
+        return false;
+    }
+
     const cartItemId = `${id}-${variantName}-${size}`; 
     const existing = cart.find(item => item.cartItemId === cartItemId);
     const currentQty = existing ? existing.qty : 0;
     
     if (currentQty + qty > maxStock) {
-        return showRoyalToast('Stock Limitation', `Only ${maxStock} units available.`, true);
+        showRoyalToast('Stock Limitation', `Only ${maxStock} units available.`, true);
+        return false;
     }
     
     if (existing) {
@@ -218,7 +291,67 @@ function addToCart(id, name, price, img, maxStock, qty, size, variantName) {
     }
     saveCart();
     showRoyalToast('Added to Bag', `${name} added.`, false);
+    return true;
 }
+
+async function buyNowDirectly(productId) {
+    let product = window.renderedProducts && window.renderedProducts[productId];
+    if (!product) {
+        if (typeof sb !== 'undefined' && sb) {
+            try {
+                const { data } = await sb.from('products').select('*').eq('id', productId).single();
+                product = data;
+            } catch(e) {
+                console.error("Error fetching product on buy now:", e);
+            }
+        }
+    }
+    
+    if (!product) {
+        showRoyalToast("Error", "Product details could not be loaded.", true);
+        return;
+    }
+    
+    // Normalise variants and pick first available size
+    let variants = Array.isArray(product.variants) 
+        ? product.variants 
+        : [{ 
+            name: "Standard", 
+            images: [product.image_url], 
+            sizes: product.variants?.options || [{size:"Standard", price: product.price, stock: product.stock_quantity}] 
+          }];
+    
+    let selectedVariant = variants[0];
+    let selectedSizeObj = null;
+    
+    for (const v of variants) {
+        if (v.sizes && Array.isArray(v.sizes)) {
+            const availableSize = v.sizes.find(s => s.stock > 0);
+            if (availableSize) {
+                selectedVariant = v;
+                selectedSizeObj = availableSize;
+                break;
+            }
+        }
+    }
+    
+    if (!selectedSizeObj && selectedVariant && selectedVariant.sizes && selectedVariant.sizes.length > 0) {
+        selectedSizeObj = selectedVariant.sizes[0];
+    }
+    
+    const finalPrice = selectedSizeObj ? selectedSizeObj.price : product.price;
+    const finalStock = selectedSizeObj ? selectedSizeObj.stock : product.stock_quantity;
+    const finalSize = selectedSizeObj ? selectedSizeObj.size : "Standard";
+    const finalVariantName = selectedVariant ? selectedVariant.name : "Standard";
+    const finalImage = (selectedVariant && selectedVariant.images && selectedVariant.images.length > 0) ? selectedVariant.images[0] : product.image_url;
+    
+    const added = await addToCart(product.id, product.name, finalPrice, finalImage, finalStock, 1, finalSize, finalVariantName);
+    if (added) {
+        window.location.href = 'cart.html';
+    }
+}
+
+window.buyNowDirectly = buyNowDirectly;
 
 function initThankYouPage() {
     const p = new URLSearchParams(window.location.search);
@@ -238,9 +371,30 @@ function initThankYouPage() {
     }
 }
 
-function initCartPage() {
+async function initCartPage() {
     const container = document.getElementById('cart-items-container');
     if (!container) return;
+
+    if (!isUserLoggedIn) {
+        // Double check session to avoidtiming race conditions on page load
+        if (sb) {
+            try {
+                const { data: { session } } = await sb.auth.getSession();
+                if (session && session.user) {
+                    isUserLoggedIn = true;
+                    currentNotificationsKey = `royal_notifications_${session.user.id}`;
+                    loadNotifications();
+                    updateNotificationsCount();
+                }
+            } catch(e) {}
+        }
+    }
+
+    if (!isUserLoggedIn) {
+        localStorage.setItem('login_redirect', window.location.href);
+        window.location.href = 'login.html';
+        return;
+    }
 
     // Update heading with count
     const heading = document.getElementById('cart-page-heading');
@@ -345,8 +499,82 @@ window.moveCartItemToWishlist = function(i) {
 };
 
 
-window.openCheckout = function() {
+window.openCheckout = async function() {
     if(cart.length === 0) return showRoyalToast("Empty Bag", "Your bag is empty.", true);
+    
+    if (!isUserLoggedIn) {
+        // Double check session to avoid timing race conditions
+        if (sb) {
+            try {
+                const { data: { session } } = await sb.auth.getSession();
+                if (session && session.user) {
+                    isUserLoggedIn = true;
+                    currentNotificationsKey = `royal_notifications_${session.user.id}`;
+                    loadNotifications();
+                    updateNotificationsCount();
+                }
+            } catch(e) {}
+        }
+    }
+
+    if (!isUserLoggedIn) {
+        showRoyalConfirm(
+            "Sign In Required",
+            "Please sign in or sign up to proceed to checkout and place your order.",
+            () => {
+                localStorage.setItem('login_redirect', window.location.href);
+                window.location.href = 'login.html';
+            }
+        );
+        return;
+    }
+
+    // Autofill based on profile saved details
+    if (typeof sb !== 'undefined' && sb) {
+        try {
+            const { data: { session } } = await sb.auth.getSession();
+            if (session && session.user) {
+                const user = session.user;
+                const metadata = user.user_metadata || {};
+                
+                const custName = document.getElementById('cust-name');
+                const custEmail = document.getElementById('cust-email');
+                const custPhone = document.getElementById('cust-phone-number');
+                const custAddress = document.getElementById('cust-address');
+                
+                if (custName && !custName.value && metadata.full_name) {
+                    custName.value = metadata.full_name;
+                }
+                if (custEmail && !custEmail.value && user.email) {
+                    custEmail.value = user.email;
+                }
+                if (custPhone && !custPhone.value && metadata.phone) {
+                    const cleanPhone = metadata.phone.replace(/\D/g, '');
+                    custPhone.value = cleanPhone.length > 10 ? cleanPhone.slice(-10) : cleanPhone;
+                }
+                if (custAddress && !custAddress.value && metadata.address) {
+                    custAddress.value = metadata.address;
+                }
+                
+                const custPostcode = document.getElementById('cust-postcode');
+                if (custPostcode && !custPostcode.value) {
+                    if (metadata.postcode) {
+                        custPostcode.value = metadata.postcode;
+                    } else if (metadata.pincode) {
+                        custPostcode.value = metadata.pincode;
+                    } else if (metadata.address) {
+                        const pincodeMatch = metadata.address.match(/\b\d{6}\b/);
+                        if (pincodeMatch) {
+                            custPostcode.value = pincodeMatch[0];
+                        }
+                    }
+                }
+            }
+        } catch (err) {
+            console.error("Error autofilling checkout from session:", err);
+        }
+    }
+    
     document.getElementById('checkout-modal').style.display = 'flex';
 };
 
@@ -362,6 +590,32 @@ window.handlePhoneInput = function(el) {
 window.submitOrder = async function(e) {
     e.preventDefault();
     if(!sb) return showRoyalToast("Connecting", "Still connecting to server. Please wait a moment.", true);
+
+    if (!isUserLoggedIn) {
+        if (sb) {
+            try {
+                const { data: { session } } = await sb.auth.getSession();
+                if (session && session.user) {
+                    isUserLoggedIn = true;
+                    currentNotificationsKey = `royal_notifications_${session.user.id}`;
+                    loadNotifications();
+                    updateNotificationsCount();
+                }
+            } catch(err) {}
+        }
+    }
+
+    if (!isUserLoggedIn) {
+        showRoyalConfirm(
+            "Sign In Required",
+            "Please sign in or sign up to place your order.",
+            () => {
+                localStorage.setItem('login_redirect', window.location.href);
+                window.location.href = 'login.html';
+            }
+        );
+        return;
+    }
 
     const btn = document.getElementById('checkout-btn');
     const originalText = btn.innerText;
@@ -589,6 +843,11 @@ async function initListingPage() {
 function renderProducts(products, container, options = {}) {
     if(!Array.isArray(products)) return;
 
+    window.renderedProducts = window.renderedProducts || {};
+    products.forEach(p => {
+        window.renderedProducts[p.id] = p;
+    });
+
     // Possible discount levels — varied and realistic
     const DISCOUNT_LEVELS = [10, 15, 20, 25, 30, 35, 40, 45, 50];
 
@@ -644,7 +903,7 @@ function renderProducts(products, container, options = {}) {
                     ${origPriceHtml}
                     ${discountPctHtml}
                 </div>
-                <a href="product.html?id=${p.id}" class="card-buy-now-btn">Buy Now</a>
+                <a href="product.html?id=${p.id}" onclick="event.preventDefault(); buyNowDirectly(${p.id});" class="card-buy-now-btn">Buy Now</a>
             </div>
         </div>`;
     }).join('');
@@ -712,8 +971,10 @@ async function initProductDetail() {
         
         let variants = Array.isArray(p.variants) ? p.variants : [{ name: "Standard", images: [p.image_url], sizes: p.variants?.options || [{size:"Standard", price: p.price, stock: p.stock_quantity}] }];
         
-        const container = document.getElementById('variant-buttons-container');
-        const group = document.getElementById('variant-selector-group');
+        const imgGroup = document.getElementById('variant-images-group');
+        const imgContainer = document.getElementById('variant-images-container');
+        const swatchGroup = document.getElementById('variant-swatches-group');
+        const swatchContainer = document.getElementById('variant-swatches-container');
         
         // State tracking variables
         let selectedPrice = p.price;
@@ -750,7 +1011,7 @@ async function initProductDetail() {
 
             // Keep Add to Bag button click handler updated with current qty
             const cartBtn = document.getElementById('add-to-cart-btn');
-            const buyBtn = document.querySelector('.btn-buy');
+            const buyBtn = document.getElementById('btn-buy') || document.querySelector('.btn-buy-now') || document.querySelector('.btn-buy');
             const discountBadge = document.getElementById('detail-discount-badge');
 
             if (discountBadge) {
@@ -766,9 +1027,11 @@ async function initProductDetail() {
                 }
                 if (buyBtn) {
                     buyBtn.disabled = false;
-                    buyBtn.onclick = () => {
-                        addToCart(p.id, p.name, selectedPrice, selectedImage, selectedStock, qty, selectedSize, selectedVariantName);
-                        window.location.href = 'cart.html';
+                    buyBtn.onclick = async () => {
+                        const added = await addToCart(p.id, p.name, selectedPrice, selectedImage, selectedStock, qty, selectedSize, selectedVariantName);
+                        if (added) {
+                            window.location.href = 'cart.html';
+                        }
                     };
                 }
             } else {
@@ -804,30 +1067,60 @@ async function initProductDetail() {
             };
         }
         
-        if(variants.length > 0 && container && group) { 
-            group.style.display='block'; 
-            container.innerHTML=''; 
-            variants.forEach((v,i)=>{ 
-                const b=document.createElement('button'); 
-                b.className='variant-btn'; 
-                b.title = v.name;
-                const img = document.createElement('img');
-                img.src = v.images[0];
-                b.appendChild(img);
-                b.onclick=()=>selectVariant(i); 
-                container.appendChild(b); 
-            }); 
-            selectVariant(0); 
+        if (variants.length > 0) {
+            if (imgGroup && imgContainer) {
+                imgGroup.style.display = 'block';
+                imgContainer.innerHTML = '';
+            }
+            
+            const hasHex = variants.some(v => v.hex);
+            if (swatchGroup && swatchContainer) {
+                if (hasHex) {
+                    swatchGroup.style.display = 'block';
+                    swatchContainer.innerHTML = '';
+                } else {
+                    swatchGroup.style.display = 'none';
+                }
+            }
+            
+            variants.forEach((v, i) => {
+                // 1. Primary Image Selector
+                if (imgContainer) {
+                    const b = document.createElement('button');
+                    b.className = 'variant-btn';
+                    b.title = v.name;
+                    const img = document.createElement('img');
+                    img.src = v.images && v.images.length > 0 ? v.images[0] : p.image_url;
+                    b.appendChild(img);
+                    b.onclick = () => selectVariant(i);
+                    imgContainer.appendChild(b);
+                }
+                
+                // 2. Swatch Selector (if hasHex)
+                if (hasHex && swatchContainer) {
+                    const b = document.createElement('button');
+                    b.className = 'swatch-btn';
+                    b.title = v.name;
+                    b.style.backgroundColor = v.hex || '#cccccc';
+                    b.onclick = () => selectVariant(i);
+                    swatchContainer.appendChild(b);
+                }
+            });
+            selectVariant(0);
         }
         
         function selectVariant(idx) {
-            document.querySelectorAll('.variant-btn').forEach((b,i)=>b.classList.toggle('active', i===idx));
+            // Update active states for both image and swatch selector lists
+            const imageBtns = imgContainer ? imgContainer.querySelectorAll('.variant-btn') : [];
+            const swatchBtns = swatchContainer ? swatchContainer.querySelectorAll('.swatch-btn') : [];
+            imageBtns.forEach((b, i) => b.classList.toggle('active', i === idx));
+            swatchBtns.forEach((b, i) => b.classList.toggle('active', i === idx));
             const v = variants[idx];
             selectedVariantName = v.name;
-            selectedImage = v.images[0];
+            selectedImage = v.images && v.images.length > 0 ? v.images[0] : p.image_url;
             
             const detailImg = document.getElementById('detail-img');
-            if (detailImg) detailImg.src = v.images[0];
+            if (detailImg) detailImg.src = selectedImage;
             
             const dotsContainer = document.getElementById('carousel-dots-container');
             const thumbsContainer = document.getElementById('product-thumbnails-container');
@@ -1009,8 +1302,248 @@ async function initProductDetail() {
             }
             wishBtn.onclick = () => toggleWishlist(p.id, p.name, p.price, p.image_url);
         }
+
+        const shareBtn = document.getElementById('img-share-btn');
+        if (shareBtn) {
+            shareBtn.onclick = async () => {
+                const shareData = {
+                    title: p.name,
+                    text: p.description || `Check out ${p.name} on Royal Collections!`,
+                    url: window.location.href
+                };
+                if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+                    try {
+                        await navigator.share(shareData);
+                    } catch (err) {
+                        if (err.name !== 'AbortError') {
+                            console.error('Error sharing:', err);
+                        }
+                    }
+                } else {
+                    try {
+                        await navigator.clipboard.writeText(window.location.href);
+                        showRoyalToast('Link Copied', 'Product link copied to your clipboard!', false);
+                    } catch (err) {
+                        showRoyalToast('Error', 'Could not copy link to clipboard.', true);
+                    }
+                }
+            };
+        }
+        
+        initProductComments(p);
     } catch(e) { console.error("Detail Error", e); }
 }
+
+// ==========================================================================
+// PRODUCT DETAIL COMMENTS & REVIEWS SYSTEM
+// ==========================================================================
+function initProductComments(product) {
+    const commentsContainer = document.getElementById('product-comments-list');
+    const commentForm = document.getElementById('product-comment-form');
+    const starsContainer = document.getElementById('rating-stars-input-container');
+    const ratingInput = document.getElementById('comment-rating');
+    
+    if (!commentsContainer || !commentForm) return;
+
+    const productId = product.id;
+
+    // Setup Rating Stars Click Handler in Form
+    if (starsContainer && ratingInput) {
+        const stars = starsContainer.querySelectorAll('i');
+        stars.forEach(star => {
+            star.addEventListener('click', () => {
+                const val = parseInt(star.getAttribute('data-value')) || 5;
+                ratingInput.value = val;
+                
+                // Highlight active stars
+                stars.forEach(s => {
+                    const sVal = parseInt(s.getAttribute('data-value'));
+                    if (sVal <= val) {
+                        s.className = 'fas fa-star active';
+                    } else {
+                        s.className = 'far fa-star';
+                    }
+                });
+            });
+            
+            // Set initial style (5 stars active)
+            star.className = 'fas fa-star active';
+        });
+    }
+
+    // Default Seed Comments based on Category
+    function getSeedComments() {
+        const cat = product.category ? product.category.toLowerCase() : 'ladies';
+        let items = [];
+        
+        if (cat.includes('ladies')) {
+            items = [
+                { author: "Ananya R.", rating: 5, text: "The embroidery is absolutely stunning! The fabric is soft, breathable, and fits perfectly. Highly recommend this boutique piece.", created_at: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString() },
+                { author: "Meera Nair", rating: 4, text: "Very elegant design. Got so many compliments at a family gathering. Standard delivery was fast.", created_at: new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString() }
+            ];
+        } else if (cat.includes('kids')) {
+            items = [
+                { author: "Priya Mohan", rating: 5, text: "Extremely soft cotton, highly suited for my daughter's sensitive skin. The color has not faded at all after multiple washes.", created_at: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString() },
+                { author: "Deepa S.", rating: 4, text: "Very cute dress. True to size and quality is premium. Will purchase again.", created_at: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString() }
+            ];
+        } else if (cat.includes('shoes')) {
+            items = [
+                { author: "Rahul V.", rating: 5, text: "Great fit and extremely comfortable cushioned sole. Wore them the entire evening without any pain.", created_at: new Date(Date.now() - 4 * 24 * 3600 * 1000).toISOString() },
+                { author: "Sangeetha K.", rating: 4, text: "Very stylish footwear. The sole has excellent grip and the material looks premium.", created_at: new Date(Date.now() - 9 * 24 * 3600 * 1000).toISOString() }
+            ];
+        } else {
+            items = [
+                { author: "Lakshmi Prasad", rating: 5, text: "Exceptional quality! Looks very premium and packaging was elegant. Worth every rupee.", created_at: new Date(Date.now() - 6 * 24 * 3600 * 1000).toISOString() },
+                { author: "Arjun Dev", rating: 5, text: "Superb boutique collection. Clean finishes and highly elegant design. 5 stars!", created_at: new Date(Date.now() - 12 * 24 * 3600 * 1000).toISOString() }
+            ];
+        }
+        return items;
+    }
+
+    // Load comments
+    async function loadComments() {
+        let list = [];
+        
+        // 1. Try Loading from Supabase
+        if (sb) {
+            try {
+                const { data, error } = await sb.from('product_comments')
+                    .select('*')
+                    .eq('product_id', productId)
+                    .order('created_at', { ascending: false });
+                
+                if (!error && data) {
+                    list = data;
+                } else {
+                    throw new Error("Supabase table not found or unavailable.");
+                }
+            } catch (err) {
+                // 2. Fallback to LocalStorage
+                const localData = localStorage.getItem(`product_comments_${productId}`);
+                if (localData) {
+                    list = JSON.parse(localData);
+                }
+            }
+        } else {
+            // No Supabase, load from LocalStorage directly
+            const localData = localStorage.getItem(`product_comments_${productId}`);
+            if (localData) {
+                list = JSON.parse(localData);
+            }
+        }
+
+        // Add seed comments if no user comments exist yet
+        const seedComments = getSeedComments();
+        const allComments = [...list, ...seedComments];
+
+        renderComments(allComments);
+        updateHeaderRatings(allComments);
+    }
+
+    // Render comments list in DOM
+    function renderComments(items) {
+        if (items.length === 0) {
+            commentsContainer.innerHTML = `<p style="color: var(--color-secondary); font-style: italic; text-align: center; padding: 20px 0;">No reviews yet. Be the first to write one!</p>`;
+            return;
+        }
+
+        commentsContainer.innerHTML = items.map(c => {
+            const starsHtml = Array.from({ length: 5 }, (_, idx) => {
+                return idx < c.rating ? '<i class="fas fa-star"></i>' : '<i class="far fa-star"></i>';
+            }).join('');
+            
+            const dateStr = new Date(c.created_at).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+
+            return `
+                <div class="comment-item">
+                    <div class="comment-header">
+                        <span class="comment-author">${escapeHtml(c.author)}</span>
+                        <span class="comment-date">${dateStr}</span>
+                    </div>
+                    <div class="comment-rating">${starsHtml}</div>
+                    <p class="comment-text-content">${escapeHtml(c.text)}</p>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Dynamically update the overall rating count and stars on the page header
+    function updateHeaderRatings(items) {
+        const ratingNumEl = document.getElementById('detail-rating-number');
+        const reviewsCountEl = document.getElementById('detail-reviews-count');
+        
+        if (items.length > 0) {
+            const sum = items.reduce((acc, curr) => acc + curr.rating, 0);
+            const avg = (sum / items.length).toFixed(1);
+            
+            if (ratingNumEl) ratingNumEl.innerText = avg;
+            if (reviewsCountEl) reviewsCountEl.innerText = `(${items.length} reviews)`;
+        }
+    }
+
+    // Submit Review Handler
+    commentForm.onsubmit = async (e) => {
+        e.preventDefault();
+        
+        const authorInput = document.getElementById('comment-author');
+        const textInput = document.getElementById('comment-text');
+        
+        if (!authorInput || !textInput) return;
+
+        const author = authorInput.value.trim();
+        const text = textInput.value.trim();
+        const rating = parseInt(ratingInput.value) || 5;
+        const createdAt = new Date().toISOString();
+
+        if (!author || !text) return;
+
+        const newComment = {
+            product_id: productId,
+            author: author,
+            text: text,
+            rating: rating,
+            created_at: createdAt
+        };
+
+        // Prepend comment in UI for immediate feedback
+        let localList = [];
+        const localData = localStorage.getItem(`product_comments_${productId}`);
+        if (localData) {
+            localList = JSON.parse(localData);
+        }
+        localList.unshift(newComment);
+        localStorage.setItem(`product_comments_${productId}`, JSON.stringify(localList));
+
+        // Attempt saving to Supabase in background
+        if (sb) {
+            try {
+                await sb.from('product_comments').insert([newComment]);
+            } catch (err) {
+                console.warn("Could not save comment to database, saved locally instead.");
+            }
+        }
+
+        // Reset form inputs
+        authorInput.value = '';
+        textInput.value = '';
+        ratingInput.value = '5';
+        if (starsContainer) {
+            starsContainer.querySelectorAll('i').forEach(s => s.className = 'fas fa-star active');
+        }
+
+        // Reload to show new list
+        loadComments();
+        showRoyalToast('Review Published', 'Thank you! Your review has been successfully published.', false);
+    };
+
+    // Load initial comments
+    loadComments();
+}
+
 
 function trackRecentlyViewed(id) {
     try {
@@ -1034,7 +1567,57 @@ function trackRecentlyViewed(id) {
 }
 
 async function initAdmin() {
-    if(!sb) return;
+    // 1. Client-Side Non-Auth UI Setup (always runs, even if Supabase is offline/null)
+    try {
+        document.getElementById('product-form')?.addEventListener('submit', handleProductSave);
+        
+        const zone = document.getElementById('ai-drag-drop-zone');
+        if (zone) {
+            // Prevent window from redirecting when file is dropped anywhere on the page
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                document.body.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false);
+                zone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false);
+            });
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                zone.addEventListener(eventName, () => {
+                    zone.style.borderColor = 'var(--color-primary)';
+                    zone.style.background = '#f1f5f9';
+                });
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                zone.addEventListener(eventName, () => {
+                    zone.style.borderColor = '#cbd5e1';
+                    zone.style.background = '#f8fafc';
+                });
+            });
+
+            zone.addEventListener('drop', (e) => {
+                const files = e.dataTransfer.files;
+                if (files && files.length > 0) {
+                    if (typeof window.handleAiFabricUpload === 'function') {
+                        window.handleAiFabricUpload({ files: files });
+                    }
+                }
+            });
+        }
+    } catch (uiErr) {
+        console.error("Admin UI Init Error:", uiErr);
+    }
+
+    // 2. Supabase Auth and Dashboard Setup
+    if(!sb) {
+        console.warn("Supabase client is not initialized. Skipping admin auth setup.");
+        return;
+    }
+    
     try {
         const { data: { session } } = await sb.auth.getSession();
         let isAdminUser = false;
@@ -1052,8 +1635,12 @@ async function initAdmin() {
             if(loginScreen) loginScreen.style.display = 'none';
             document.getElementById('admin-dashboard-content').style.display = 'block';
             document.getElementById('admin-logout-btn').style.display = 'inline-block';
-            const fab = document.getElementById('royal-chatbot-fab');
-            if (fab) fab.style.display = 'flex';
+            if (typeof initRoyalChatbot === 'function') {
+                initRoyalChatbot();
+            }
+            if (typeof updateChatbotVisibility === 'function') {
+                updateChatbotVisibility();
+            }
             loadAdminDashboard();
             loadAdminOrders();
             loadAdminProducts();
@@ -1061,8 +1648,9 @@ async function initAdmin() {
             const loginScreen = document.getElementById('admin-login-screen');
             if(loginScreen) loginScreen.style.display = 'flex';
             document.getElementById('admin-dashboard-content').style.display = 'none';
-            const fab = document.getElementById('royal-chatbot-fab');
-            if (fab) fab.style.display = 'none';
+            if (typeof updateChatbotVisibility === 'function') {
+                updateChatbotVisibility();
+            }
         }
         
         sb.auth.onAuthStateChange((event) => { if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') location.reload(); });
@@ -1079,9 +1667,7 @@ async function initAdmin() {
                 btn.disabled=false; btn.innerText="Sign In";
             }
         });
-        
-        document.getElementById('product-form')?.addEventListener('submit', handleProductSave);
-    } catch(e) { console.error("Admin Init Error:", e); }
+    } catch(e) { console.error("Admin Auth Init Error:", e); }
 }
 
 async function handleProductSave(e) {
@@ -1099,6 +1685,7 @@ async function handleProductSave(e) {
         
         for (let block of variantBlocks) {
             const varName = block.querySelector('.variant-name-input').value;
+            const varHex = block.querySelector('.variant-hex-input')?.value || "";
             const fileInput = block.querySelector('.variant-image-input');
             const existingJson = block.querySelector('.existing-images-json').value;
             
@@ -1133,7 +1720,7 @@ async function handleProductSave(e) {
                     prices.push(Number(p));
                 }
             });
-            variantsData.push({ name: varName, images: imageUrls, sizes: sizesData });
+            variantsData.push({ name: varName, hex: varHex, images: imageUrls, sizes: sizesData });
         }
         
         const payload = {
@@ -1165,7 +1752,7 @@ async function loadAdminOrders() {
     const grid = document.getElementById('admin-orders-grid');
     if(!grid) return;
     grid.innerHTML = '<div class="empty-state">Loading...</div>';
-    const { data: orders, error } = await sb.from('orders').select('*').order('created_at', { ascending: false }).limit(200);
+    const { data: orders, error } = await sb.from('orders').select('*').neq('status', 'Pending Payment').order('created_at', { ascending: false }).limit(200);
     if (error) { grid.innerHTML = `<div class="empty-state">Error: ${error.message}</div>`; return; }
     if(!orders || orders.length === 0) { grid.innerHTML = '<div class="empty-state">No orders found.</div>'; currentAdminOrders = []; return; }
     currentAdminOrders = orders;
@@ -1213,11 +1800,41 @@ async function renderOrderItems(orders) {
     const ids = orders.map(o => o.id);
     const { data: items } = await sb.from('order_items').select('*').in('order_id', ids);
     const html = orders.map(o => {
-        const orderItems = items.filter(i => i.order_id === o.id).map(i => `<div class="order-item-row"><span>${escapeHtml(i.product_name)} x ${i.quantity}</span><span>₹${i.subtotal}</span></div>`).join('');
+        const snapshot = Array.isArray(o.cart_snapshot) ? o.cart_snapshot : [];
+        let orderItems = '';
+        
+        if (snapshot.length > 0) {
+            orderItems = snapshot.map(item => `
+                <div class="order-item-row" style="display: flex; align-items: center; gap: 15px; padding: 10px 0; border-bottom: 1px dashed #eee; justify-content: flex-start;">
+                    <img src="${item.img || 'assets/placeholder.png'}" style="width: 45px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #eee; flex-shrink: 0;" alt="${escapeHtml(item.name)}">
+                    <div style="flex-grow: 1; text-align: left;">
+                        <div style="font-weight: 600; font-size: 0.88rem; color: #121212; line-height: 1.3;">${escapeHtml(item.name.split('(')[0].trim())}</div>
+                        <div style="font-size: 0.75rem; color: #666; margin-top: 2px;">
+                            Size: ${escapeHtml(item.size)} | Option: ${escapeHtml(item.variant || 'Standard')}
+                        </div>
+                        <div style="font-size: 0.75rem; color: #666; margin-top: 3px;">
+                            Qty: ${item.qty} × ₹${item.price}
+                        </div>
+                    </div>
+                    <strong style="font-size: 0.88rem; color: #121212; flex-shrink: 0; margin-left: 10px;">₹${(item.price * item.qty).toLocaleString()}</strong>
+                </div>
+            `).join('');
+        } else {
+            // Fallback to order_items for legacy orders
+            const matchedItems = items ? items.filter(i => i.order_id === o.id) : [];
+            orderItems = matchedItems.map(i => `
+                <div class="order-item-row" style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #eee; font-size: 0.88rem; width: 100%;">
+                    <span>${escapeHtml(i.product_name)} x ${i.quantity}</span>
+                    <span>₹${i.subtotal}</span>
+                </div>
+            `).join('');
+        }
+        
         return `<div class="order-card"><div class="order-header"><strong>#${o.id}</strong> <span>${new Date(o.created_at).toLocaleString()}</span></div><div class="order-body"><div class="order-info"><p><i class="fas fa-user"></i> <strong>${escapeHtml(o.customer_name)}</strong></p><p><i class="fas fa-phone"></i> ${escapeHtml(o.customer_phone || '-')}</p><p><i class="fas fa-map-marker-alt"></i> ${escapeHtml(o.address)}</p><small>${escapeHtml(o.post_code || '-')}</small><p><small>Method: ${escapeHtml(o.payment_method)}</small></p></div><div class="order-items-list">${orderItems}<div style="text-align:right; font-weight:bold; margin-top:10px; font-size:1.1rem;">₹${o.total_amount}</div><div style="text-align:right; margin-top:5px;"><span class="status-badge ${o.status==='Pending'?'status-pending':'status-paid'}">${escapeHtml(o.status)}</span></div></div></div></div>`;
     }).join('');
     document.getElementById('admin-orders-grid').innerHTML = html;
 }
+
 
 window.filterOrdersLocal = function() {
     let term = document.getElementById('order-search-input').value.toLowerCase().trim();
@@ -1254,16 +1871,634 @@ window.addVariantBlock = function(data = null) {
     const container = document.getElementById('variants-container');
     const template = document.getElementById('variant-block-template');
     const clone = template.content.cloneNode(true);
+    
+    const fileInput = clone.querySelector('.variant-image-input');
+    const previewEl = clone.querySelector('.variant-color-preview');
+    const hexInput = clone.querySelector('.variant-hex-input');
+    const nameInput = clone.querySelector('.variant-name-input');
+    
+    if (fileInput) {
+        fileInput.addEventListener('change', async (e) => {
+            const files = e.target.files;
+            if (files && files.length > 0) {
+                // Clear and render local previews immediately
+                const previewImgEl = fileInput.closest('.variant-block')?.querySelector('.variant-img-preview');
+                if (previewImgEl) {
+                    previewImgEl.innerHTML = '';
+                    Array.from(files).forEach(f => {
+                        const url = URL.createObjectURL(f);
+                        previewImgEl.innerHTML += `<img src="${url}">`;
+                    });
+                }
+                
+                // No auto-detection here. Use AI Fabric Analyzer for color detection.
+            }
+        });
+    }
+
     if(data) {
-        clone.querySelector('.variant-name-input').value = data.name;
-        clone.querySelector('.existing-images-json').value = JSON.stringify(data.images);
-        const preview = clone.querySelector('.variant-img-preview');
-        data.images.forEach(url => preview.innerHTML += `<img src="${url}">`);
+        clone.querySelector('.variant-name-input').value = data.name || '';
+        if (data.hex) {
+            if (hexInput) hexInput.value = data.hex;
+            if (previewEl) {
+                previewEl.style.backgroundColor = data.hex;
+                previewEl.style.display = 'block';
+            }
+        }
+        if (data.images) {
+            clone.querySelector('.existing-images-json').value = JSON.stringify(data.images);
+            const preview = clone.querySelector('.variant-img-preview');
+            data.images.forEach(url => preview.innerHTML += `<img src="${url}">`);
+        }
+        if (data.localFiles) {
+            const preview = clone.querySelector('.variant-img-preview');
+            data.localFiles.forEach(f => {
+                const url = URL.createObjectURL(f);
+                preview.innerHTML += `<img src="${url}">`;
+            });
+        }
         const tbody = clone.querySelector('tbody');
-        data.sizes.forEach(s => addSizeRow(tbody, s.size, s.price, s.stock));
+        if (data.sizes && data.sizes.length > 0) {
+            data.sizes.forEach(s => addSizeRow(tbody, s.size, s.price, s.stock));
+        } else {
+            addSizeRow(tbody);
+        }
     } else { addSizeRow(clone.querySelector('tbody')); }
+    
+    const localFilesToAssign = (data && data.localFiles) ? data.localFiles : null;
+    
     container.appendChild(clone);
+    
+    if (localFilesToAssign && fileInput) {
+        try {
+            const dt = new DataTransfer();
+            localFilesToAssign.forEach(f => dt.items.add(f));
+            fileInput.files = dt.files;
+        } catch (err) {
+            console.error("DataTransfer error post-append:", err);
+        }
+    }
 };
+
+
+function rgbToHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+
+    if (max === min) {
+        h = s = 0; // achromatic
+    } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+    }
+    return {
+        h: Math.round(h * 360),
+        s: Math.round(s * 100),
+        l: Math.round(l * 100)
+    };
+}
+
+function getClosestColor(r, g, b) {
+    const hsl = rgbToHsl(r, g, b);
+    const h = hsl.h;
+    const s = hsl.s;
+    const l = hsl.l;
+
+    console.log(`HSL computed: Hue=${h}°, Saturation=${s}%, Lightness=${l}% (RGB: ${r}, ${g}, ${b})`);
+
+    // 1. NEUTRALS & GREYS (Black, White, Off-Whites, Greys)
+    if (l < 15) {
+        return { name: "Black", hex: "#111111" };
+    }
+    if (l < 25 && s < 18) {
+        return { name: "Black", hex: "#111111" };
+    }
+    if (l > 94 && s < 6) {
+        return { name: "White", hex: "#ffffff" };
+    }
+    if (l > 90 && h >= 35 && h < 60 && s >= 6 && s < 15) {
+        return { name: "Ivory", hex: "#fffff0" };
+    }
+    if (l > 88 && s < 10) {
+        return { name: "Off-White", hex: "#faf9f6" };
+    }
+    if (s < 12) {
+        if (l < 32) return { name: "Charcoal", hex: "#2f3e46" };
+        if (l > 65 && l <= 88) {
+            if (s < 8) return { name: "Silver", hex: "#c0c0c0" };
+            return { name: "Light Grey", hex: "#d3d3d3" };
+        }
+        return { name: "Grey", hex: "#808080" };
+    }
+
+    // 2. CREAMS, CHAMPAGNES, BEIGES, KHAKIS & CAMELS (Warm Neutrals)
+    if (h >= 25 && h < 60) {
+        if (l >= 82 && s < 25) return { name: "Cream", hex: "#fffdd0" };
+        if (l >= 75 && l < 82 && s >= 15 && s < 30) return { name: "Champagne", hex: "#f7e7ce" };
+        if (l >= 60 && l < 82 && s < 32) return { name: "Beige", hex: "#f5f5dc" };
+        if (l >= 38 && l < 60 && s < 30) return { name: "Khaki", hex: "#c3b091" };
+        if (l >= 45 && l < 60 && s >= 28 && s < 50) return { name: "Camel", hex: "#c19a6b" };
+    }
+
+    // 3. SPECIALIZED LIGHT APPAREL SHADES (Denims, Sages, Lavenders, Lilacs, Mints)
+    // washed blue denim
+    if (h >= 180 && h < 245 && s >= 10 && s < 35 && l >= 50 && l < 80) {
+        return { name: "Light Blue", hex: "#add8e6" };
+    }
+    // lavender
+    if (h >= 245 && h < 310 && s >= 10 && s < 45 && l >= 68) {
+        return { name: "Lavender", hex: "#e6e6fa" };
+    }
+    // lilac
+    if (h >= 265 && h < 295 && s >= 20 && s < 45 && l >= 62 && l < 78) {
+        return { name: "Lilac", hex: "#c8a2c8" };
+    }
+    // sage green
+    if (h >= 80 && h < 160 && l >= 55 && l < 75 && s >= 10 && s < 32) {
+        return { name: "Sage Green", hex: "#87a96b" };
+    }
+    // mint green
+    if (h >= 120 && h < 165 && l >= 72 && s >= 15 && s < 50) {
+        return { name: "Mint Green", hex: "#aaf0d1" };
+    }
+    // aqua / seafoam
+    if (h >= 150 && h < 200 && l >= 65 && s >= 20 && s < 50) {
+        return { name: "Aqua", hex: "#7fffd4" };
+    }
+
+    // 4. PEACH, SALMON, ROSE GOLD, DUSTY ROSE & MAUVES
+    if (h >= 330 || h < 25) {
+        if (l >= 72 && s >= 15 && s < 45) {
+            if (h >= 12 && h < 30) return { name: "Peach", hex: "#ffdab9" };
+            return { name: "Blush Pink", hex: "#ffb7c5" };
+        }
+        if (h >= 6 && h < 22 && l >= 60 && l < 72 && s >= 35) {
+            return { name: "Salmon", hex: "#fa8072" };
+        }
+        if (l >= 60 && l < 75 && s >= 20 && s < 40) {
+            return { name: "Rose Gold", hex: "#b76e79" };
+        }
+        if (l >= 48 && l < 68 && s >= 12 && s < 35) {
+            return { name: "Dusty Rose", hex: "#cca9a1" };
+        }
+    }
+    if (h >= 270 && h < 320 && s >= 15 && s < 35 && l >= 45 && l < 70) {
+        return { name: "Mauve", hex: "#e0b0ff" };
+    }
+
+    // 5. DETAILED HUE RANGES (Main Colors & Shades)
+
+    // A. REDS & PINK & BURGUNDY & MAROON
+    if (h >= 340 || h < 12) {
+        if (l >= 15 && l < 32) {
+            if (s >= 30) return { name: "Burgundy", hex: "#800020" };
+            return { name: "Maroon", hex: "#800000" };
+        }
+        if (l >= 28 && l < 48 && s >= 50) return { name: "Crimson", hex: "#dc143c" };
+        if (l >= 60) return { name: "Pink", hex: "#ffc0cb" };
+        return { name: "Red", hex: "#e74c3c" };
+    }
+
+    // B. ORANGES & RUST & BROWNS & APRICOT
+    if (h >= 12 && h < 35) {
+        if (l < 20 && s >= 20) return { name: "Chocolate Brown", hex: "#3d2314" };
+        if (l < 32) return { name: "Brown", hex: "#5c4033" };
+        if (l >= 25 && l < 45 && s >= 35) return { name: "Rust", hex: "#b22222" };
+        if (h >= 12 && h < 25 && l >= 30 && l < 50 && s >= 30 && s < 60) return { name: "Terracotta", hex: "#e2725b" };
+        if (h >= 20 && h < 35 && l >= 65 && l < 78 && s >= 30 && s < 55) return { name: "Apricot", hex: "#fbceb1" };
+        if (l >= 32 && l < 60 && s < 45) return { name: "Tan", hex: "#d2b48c" };
+        return { name: "Orange", hex: "#f39c12" };
+    }
+
+    // C. YELLOWS & MUSTARDS & GOLD
+    if (h >= 35 && h < 62) {
+        if (l < 32) return { name: "Olive", hex: "#556b2f" };
+        if (h >= 38 && h < 54 && l >= 45 && l < 65 && s >= 45 && s < 75) return { name: "Gold", hex: "#ffd700" };
+        if (l < 60 && s >= 35) return { name: "Mustard", hex: "#e1ad01" };
+        if (h >= 48 && h < 62 && l >= 60 && s >= 60) return { name: "Lemon Yellow", hex: "#fff700" };
+        return { name: "Yellow", hex: "#fcbf49" };
+    }
+
+    // D. GREENS & OLIVES & EMERALD
+    if (h >= 62 && h < 160) {
+        if (h >= 62 && h < 90 && l < 40) return { name: "Olive Green", hex: "#556b2f" };
+        if (h >= 60 && h < 90 && l >= 30 && l < 50 && s >= 10 && s < 25) return { name: "Khaki Green", hex: "#708238" };
+        if (l < 35) return { name: "Forest Green", hex: "#1b4d3e" };
+        if (h >= 110 && h < 155 && l >= 25 && l < 55 && s >= 45) return { name: "Emerald Green", hex: "#50c878" };
+        if (h >= 62 && h < 90 && s >= 45) return { name: "Lime Green", hex: "#32cd32" };
+        return { name: "Green", hex: "#2ecc71" };
+    }
+
+    // E. TEALS & TURQUOISE
+    if (h >= 160 && h < 195) {
+        if (l < 42) return { name: "Teal", hex: "#008080" };
+        return { name: "Turquoise", hex: "#40e0d0" };
+    }
+
+    // F. BLUES & NAVIES & ROYAL BLUE
+    if (h >= 195 && h < 245) {
+        if (l < 26 && s >= 20) return { name: "Navy Blue", hex: "#0b1d3a" };
+        if (h >= 200 && h < 240 && s >= 55 && l >= 30 && l < 60) return { name: "Royal Blue", hex: "#4169e1" };
+        if (l >= 25 && l < 48 && s >= 15 && s < 40) return { name: "Indigo", hex: "#2f4858" };
+        if (l >= 65 && s >= 30) return { name: "Sky Blue", hex: "#87ceeb" };
+        return { name: "Blue", hex: "#2563eb" };
+    }
+
+    // G. PURPLES & PLUMS
+    if (h >= 245 && h < 300) {
+        if (l < 35) return { name: "Plum", hex: "#4d0f28" };
+        return { name: "Purple", hex: "#8b5cf6" };
+    }
+
+    // H. MAGENTAS & FUCHSIAS
+    if (h >= 300 && h < 340) {
+        if (s >= 55 && l >= 35 && l < 60) return { name: "Fuchsia", hex: "#ff007f" };
+        if (s >= 40 && l >= 25 && l < 55) return { name: "Magenta", hex: "#ff00ff" };
+        if (l >= 60) return { name: "Pink", hex: "#ffc0cb" };
+        return { name: "Fuchsia", hex: "#ff007f" };
+    }
+
+    // Fallback if none matches (safe guard)
+    return { name: "Grey", hex: "#808080" };
+}
+
+function extractColorFromImage(imgEl) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = imgEl.naturalWidth;
+    canvas.height = imgEl.naturalHeight;
+    ctx.drawImage(imgEl, 0, 0, canvas.width, canvas.height);
+    
+    // Sample the center 30% width, 40% height of the image to focus on the dress and avoid borders/background
+    const startX = Math.floor(canvas.width * 0.35);
+    const startY = Math.floor(canvas.height * 0.3);
+    const w = Math.floor(canvas.width * 0.3);
+    const h = Math.floor(canvas.height * 0.4);
+    
+    if (w === 0 || h === 0) {
+        return {
+            primary: { name: "Unknown", hex: "#cccccc" },
+            secondary: null
+        };
+    }
+
+    const imageData = ctx.getImageData(startX, startY, w, h);
+    const data = imageData.data;
+    
+    const colorCounts = {};
+    let totalCount = 0;
+    
+    // Sample every 4th pixel for high speed and accuracy
+    for (let i = 0; i < data.length; i += 4 * 4) {
+        const r = data[i];
+        const g = data[i+1];
+        const b = data[i+2];
+        const a = data[i+3];
+        
+        if (a > 100) {
+            const colorObj = getClosestColor(r, g, b);
+            if (colorObj && colorObj.name !== "Unknown") {
+                colorCounts[colorObj.name] = colorCounts[colorObj.name] || { count: 0, hex: colorObj.hex };
+                colorCounts[colorObj.name].count++;
+                totalCount++;
+            }
+        }
+    }
+    
+    if (totalCount === 0) {
+        return {
+            primary: { name: "Unknown", hex: "#cccccc" },
+            secondary: null
+        };
+    }
+    
+    function getColorPriority(name) {
+        const neutralBackgrounds = ["White", "Off-White", "Light Grey", "Grey"];
+        if (neutralBackgrounds.includes(name)) {
+            return 1; // lowest priority (usually mannequin background)
+        }
+        const premiumColors = ["Black", "Burgundy", "Navy Blue", "Royal Blue", "Blue", "Red", "Pink", "Purple", "Emerald", "Teal", "Forest Green", "Plum", "Fuchsia", "Rust"];
+        if (premiumColors.includes(name)) {
+            return 3; // highest priority (most attractive catalog colors)
+        }
+        return 2; // medium priority (Beige, Brown, Khaki, Orange, Yellow, etc.)
+    }
+
+    // Convert counts to sorted array and sort by weighted score
+    const sortedColors = Object.keys(colorCounts).map(name => {
+        const percentage = (colorCounts[name].count / totalCount) * 100;
+        const priority = getColorPriority(name);
+        const score = percentage + (priority - 2) * 25;
+        return {
+            name: name,
+            hex: colorCounts[name].hex,
+            count: colorCounts[name].count,
+            percentage: percentage,
+            score: score
+        };
+    }).sort((a, b) => b.score - a.score);
+    
+    console.log("Analyzed prioritized color distribution:", sortedColors);
+    
+    const primary = sortedColors[0];
+    let secondary = null;
+    
+    // If there is a second color that makes up more than 15% of the sampled area, report it!
+    if (sortedColors.length > 1 && sortedColors[1].percentage > 15) {
+        secondary = sortedColors[1];
+    }
+    
+    return {
+        primary: primary,
+        secondary: secondary
+    };
+}
+
+let tfModel = null;
+
+function getApparelType(predictions) {
+    const ladiesKidsItems = [
+        { name: "Frock", keywords: ["frock", "apron", "pinafore"] },
+        { name: "Gown", keywords: ["gown", "wedding", "robe", "cloak", "velvet"] },
+        { name: "Dress", keywords: ["dress", "sarong", "kimono"] },
+        { name: "Top", keywords: ["shirt", "t-shirt", "jersey", "cardigan", "sweater", "blouse", "top", "tunic", "poncho", "sweatshirt"] },
+        { name: "Skirt", keywords: ["skirt"] },
+        { name: "Pants", keywords: ["pants", "jean", "trousers", "slacks", "leggings", "pajamas", "shorts"] }
+    ];
+
+    for (let pred of predictions) {
+        const className = pred.className.toLowerCase();
+        for (let item of ladiesKidsItems) {
+            const found = item.keywords.find(k => className.includes(k));
+            if (found) {
+                return item.name;
+            }
+        }
+    }
+
+    // Fallback if the top prediction is a mannequin or pedestal (highly common in catalog images)
+    const topClass = predictions.length > 0 ? predictions[0].className.toLowerCase() : "";
+    if (topClass.includes("mannequin") || topClass.includes("pedestal") || topClass.includes("pole") || topClass.includes("dummy")) {
+        return "Frock / Dress";
+    }
+
+    return "Dress"; // Default safe fallback
+}
+
+window.handleAiFabricUpload = async function(input) {
+    console.log("handleAiFabricUpload called", input);
+    if (!input) {
+        console.error("No input argument passed to handleAiFabricUpload.");
+        return;
+    }
+    const files = input.files || (input.dataTransfer && input.dataTransfer.files);
+    if (!files || files.length === 0) {
+        console.warn("No files found to analyze.");
+        return;
+    }
+    
+    const file = files[0];
+    console.log("Analyzing file:", file.name, "size:", file.size, "type:", file.type);
+    
+    const statusEl = document.getElementById('ai-upload-status');
+    const modal = document.getElementById('ai-analysis-modal');
+    const previewImg = document.getElementById('ai-modal-image-preview');
+    const colorNameEl = document.getElementById('ai-modal-color-name');
+    const colorHexEl = document.getElementById('ai-modal-color-hex');
+    const colorSwatchEl = document.getElementById('ai-modal-color-swatch');
+    
+    const secondaryGroup = document.getElementById('ai-modal-secondary-group');
+    const secondaryNameEl = document.getElementById('ai-modal-secondary-name');
+    const secondaryHexEl = document.getElementById('ai-modal-secondary-hex');
+    const secondarySwatchEl = document.getElementById('ai-modal-secondary-swatch');
+    
+    const fabricDescEl = document.getElementById('ai-modal-fabric-desc');
+    
+    if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.style.color = 'var(--color-primary)';
+        statusEl.innerText = `Preparing Client-Side AI...`;
+    }
+    
+    try {
+        if (!modal) {
+            throw new Error("Target modal 'ai-analysis-modal' not found in DOM.");
+        }
+        modal.style.display = 'flex';
+        
+        if (previewImg) {
+            previewImg.style.display = 'block';
+            previewImg.src = URL.createObjectURL(file);
+        }
+        
+        if (colorNameEl) colorNameEl.value = 'Analyzing...';
+        if (colorHexEl) colorHexEl.value = '';
+        if (colorSwatchEl) colorSwatchEl.style.backgroundColor = 'transparent';
+        
+        if (secondaryGroup) secondaryGroup.style.display = 'none';
+        if (secondaryNameEl) secondaryNameEl.value = '';
+        if (secondaryHexEl) secondaryHexEl.value = '';
+        if (secondarySwatchEl) secondarySwatchEl.style.backgroundColor = 'transparent';
+        
+        if (fabricDescEl) fabricDescEl.value = 'Loading Free TensorFlow Model...';
+
+        // Load TF Model
+        console.log("Checking TensorFlow & MobileNet libraries...");
+        if (!tfModel) {
+            if (typeof mobilenet === 'undefined') {
+                throw new Error("TensorFlow MobileNet script not loaded. Check internet connection.");
+            }
+            console.log("Loading MobileNet model...");
+            tfModel = await mobilenet.load();
+            console.log("MobileNet model loaded successfully.");
+        }
+
+        if (statusEl) statusEl.innerText = `Analyzing Image...`;
+        if (fabricDescEl) fabricDescEl.value = 'Analyzing Image...';
+
+        // Wait for image to load to run analysis
+        if (previewImg) {
+            await new Promise((resolve) => {
+                if (previewImg.complete) resolve();
+                else previewImg.onload = resolve;
+            });
+        } else {
+            throw new Error("Preview image element not found, cannot run canvas/AI operations.");
+        }
+
+        // 1. Run MobileNet Classification
+        console.log("Running classification predictions...");
+        const predictions = await tfModel.classify(previewImg);
+        console.log("Predictions:", predictions);
+        
+        // Filter predictions to only support ladies & kids wear items
+        const detectedItem = getApparelType(predictions);
+
+        // 2. Run Canvas Color Extraction (Pixel scan)
+        console.log("Extracting dominant colors...");
+        const colorData = extractColorFromImage(previewImg);
+        console.log("Color extraction result:", colorData);
+
+        const primaryColor = colorData.primary;
+        const secondaryColor = colorData.secondary;
+
+        // 3. Generate Smart Description
+        let colorNameText = primaryColor.name;
+        if (secondaryColor) {
+            colorNameText += ` and ${secondaryColor.name}`;
+        }
+        
+        const descriptionTemplate = `A stunning ${colorNameText} ${detectedItem} featuring a comfortable and elegant design. Perfect for everyday wear, this piece offers a premium look with high-quality stitching and a flattering fit.`;
+
+        // Update Modal
+        if (colorNameEl) colorNameEl.value = primaryColor.name;
+        if (colorHexEl) colorHexEl.value = primaryColor.hex;
+        if (colorSwatchEl) colorSwatchEl.style.backgroundColor = primaryColor.hex;
+
+        // If secondary color exists, show it
+        if (secondaryColor && secondaryGroup) {
+            secondaryGroup.style.display = 'block';
+            if (secondaryNameEl) secondaryNameEl.value = secondaryColor.name;
+            if (secondaryHexEl) secondaryHexEl.value = secondaryColor.hex;
+            if (secondarySwatchEl) secondarySwatchEl.style.backgroundColor = secondaryColor.hex;
+        }
+
+        if (fabricDescEl) fabricDescEl.value = descriptionTemplate;
+
+        if (statusEl) {
+            statusEl.style.color = '#27ae60';
+            statusEl.innerText = `Analysis complete!`;
+            setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+        }
+    } catch (err) {
+        console.error("AI Analysis Error:", err);
+        if (fabricDescEl) {
+            fabricDescEl.value = `Error: ${err.message || err}`;
+        }
+        if (statusEl) {
+            statusEl.innerText = `Error: ${err.message || err}`;
+            statusEl.style.color = '#e74c3c';
+        }
+    } finally {
+        if (input && 'value' in input) {
+            input.value = '';
+        }
+    }
+};
+
+window.closeAiModal = function() {
+    document.getElementById('ai-analysis-modal').style.display = 'none';
+};
+
+window.copyAiDetailsToDescription = function() {
+    const colorName = document.getElementById('ai-modal-color-name').value;
+    const secondaryNameEl = document.getElementById('ai-modal-secondary-name');
+    const secondaryGroup = document.getElementById('ai-modal-secondary-group');
+    const fabricDesc = document.getElementById('ai-modal-fabric-desc').value;
+    
+    if (!colorName && !fabricDesc) return;
+    
+    const descField = document.getElementById('prod-desc');
+    if (descField) {
+        let colorText = colorName;
+        const hasSecondary = secondaryGroup && secondaryGroup.style.display !== 'none' && secondaryNameEl && secondaryNameEl.value;
+        if (hasSecondary) {
+            colorText += ` & ${secondaryNameEl.value}`;
+        }
+        
+        let textToAdd = `\n\n---\n**Fabric Details:** ${fabricDesc}`;
+        if (!descField.value) {
+            textToAdd = textToAdd.trim();
+        }
+        descField.value += textToAdd;
+        showRoyalToast("Added to Description", `Fabric details added! Please remember to create a variant for the detected color: ${colorText}`, false);
+        closeAiModal();
+    }
+};
+
+window.handleAiBatchUpload = async function(input) {
+    const files = input.files;
+    if (!files || files.length === 0) return;
+
+    const statusEl = document.getElementById('ai-upload-status');
+    if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.style.color = 'var(--color-primary)';
+        statusEl.innerText = `Processing batch of ${files.length} images...`;
+    }
+
+    try {
+        if (!tfModel) {
+            if (typeof mobilenet === 'undefined') {
+                throw new Error("TensorFlow MobileNet script not loaded. Check internet connection.");
+            }
+            if (statusEl) statusEl.innerText = "Loading Free TensorFlow Model...";
+            tfModel = await mobilenet.load();
+        }
+
+        const groups = {}; // colorName -> { hex, files: [] }
+
+        for (let file of files) {
+            try {
+                const img = new Image();
+                img.src = URL.createObjectURL(file);
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                });
+
+                const colorData = extractColorFromImage(img);
+                const primaryColor = colorData.primary;
+                const colorName = primaryColor.name;
+
+                if (!groups[colorName]) {
+                    groups[colorName] = {
+                        hex: primaryColor.hex,
+                        files: []
+                    };
+                }
+                groups[colorName].files.push(file);
+            } catch (e) {
+                console.error("Error processing file in batch:", file.name, e);
+            }
+        }
+
+        // Clear existing variants before adding new auto-grouped ones
+        document.getElementById('variants-container').innerHTML = '';
+
+        // Create a variant block for each group
+        for (let colorName in groups) {
+            const group = groups[colorName];
+            addVariantBlock({
+                name: colorName,
+                hex: group.hex,
+                localFiles: group.files
+            });
+        }
+
+        if (statusEl) {
+            statusEl.style.color = '#27ae60';
+            statusEl.innerText = `Auto-grouped into ${Object.keys(groups).length} variants!`;
+            setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+        }
+    } catch (err) {
+        console.error("AI Batch Grouping Error:", err);
+        if (statusEl) {
+            statusEl.innerText = `Error: ${err.message || err}`;
+            statusEl.style.color = '#e74c3c';
+        }
+    } finally {
+        input.value = '';
+    }
+};
+
 
 window.addSizeRow = function(tbody, s='', p='', st='') {
     const tr = document.createElement('tr');
@@ -1509,12 +2744,12 @@ const DEFAULT_NOTIFICATIONS = [
 
 function loadNotifications() {
     try {
-        const saved = localStorage.getItem('royal_notifications');
+        const saved = localStorage.getItem(currentNotificationsKey);
         if (saved) {
             notifications = JSON.parse(saved);
         } else {
             notifications = [...DEFAULT_NOTIFICATIONS];
-            localStorage.setItem('royal_notifications', JSON.stringify(notifications));
+            localStorage.setItem(currentNotificationsKey, JSON.stringify(notifications));
         }
     } catch (e) {
         notifications = [...DEFAULT_NOTIFICATIONS];
@@ -1523,7 +2758,7 @@ function loadNotifications() {
 
 function saveNotifications() {
     try {
-        localStorage.setItem('royal_notifications', JSON.stringify(notifications));
+        localStorage.setItem(currentNotificationsKey, JSON.stringify(notifications));
     } catch (e) {}
     updateNotificationsCount();
 }
@@ -1655,6 +2890,23 @@ window.loadAdminProducts = loadAdminProducts;
 // ==========================================================================
 // ROYAL ASSISTANT SUPPORT CHATBOT WIDGET (GLOBAL INTEGRATION)
 // ==========================================================================
+function updateChatbotVisibility() {
+    const fab = document.getElementById('royal-chatbot-fab');
+    if (!fab) return;
+    
+    const isAdminPage = window.location.pathname.includes('admin');
+    if (isAdminPage) {
+        const dashboard = document.getElementById('admin-dashboard-content');
+        if (dashboard && (dashboard.style.display === 'block' || dashboard.style.display !== 'none')) {
+            fab.style.setProperty('display', 'flex', 'important');
+        } else {
+            fab.style.setProperty('display', 'none', 'important');
+        }
+    } else {
+        fab.style.setProperty('display', 'flex', 'important');
+    }
+}
+
 function initRoyalChatbot() {
     if (document.getElementById('royal-chatbot-fab')) return;
 
@@ -1663,7 +2915,7 @@ function initRoyalChatbot() {
         ? `<button class="royal-chat-attach" id="royal-chat-attach" title="Attach Image"><i class="fas fa-plus"></i></button>
            <input type="file" id="royal-chat-file-input" accept="image/*" style="display: none;">`
         : '';
-    const fabDisplay = isAdminPage ? 'none' : 'flex';
+    let fabDisplay = 'flex';
 
     // Inject CSS Styles Dynamically
     const style = document.createElement('style');
@@ -2061,9 +3313,37 @@ function initRoyalChatbot() {
             hideTyping();
             const q = query.toLowerCase().trim();
 
-            // 1. GREETINGS
-            if (q === 'hi' || q === 'hello' || q === 'hey' || q === 'yo') {
-                addMessage("Hello there! 👑 How can I help you find the perfect outfit today?");
+            // 1. GREETINGS & CHIT-CHAT (Flexible Regex Matching)
+            const isGreeting = /^(hi+|hello+|hey+|yo+|g'day|good\s+(morning|afternoon|evening))\b/i.test(q);
+            if (isGreeting) {
+                const greetings = [
+                    "Hello there! 👑 How can I help you find the perfect outfit today?",
+                    "Hi! Welcome to Royal Collections. 🌟 What elegant styles are you looking for today?",
+                    "Hey! Hope you are having a wonderful day. 👑 How can I assist you with our collections?"
+                ];
+                const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
+                addMessage(randomGreeting);
+                return;
+            }
+
+            // 1b. BOT IDENTITY
+            const isIdentity = /who\s+(are\s+you|is\s+this)|your\s+name|what\s+are\s+you/i.test(q);
+            if (isIdentity) {
+                addMessage("I am the <strong>Royal Assistant</strong>, your virtual personal shopper! 👑 I can help you search our boutique catalog, check sizing, view category links, or find store policies. Let me know what you're looking for!");
+                return;
+            }
+
+            // 1c. WELL-BEING & SMALL TALK
+            const isWellBeing = /how\s+(are\s+you|is\s+it\s+going|are\s+things|you\s+doing)/i.test(q);
+            if (isWellBeing) {
+                addMessage("I'm doing splendidly, thank you for asking! 😊 I'm always ready to help you discover beautiful garments. How are you doing today? Can I help you browse our collections?");
+                return;
+            }
+
+            // 1d. GRATITUDE / APPRECIATION
+            const isGratitude = /\b(thank\s+you|thanks|thx|great|awesome|perfect|cool|wonderful|amazing)\b/i.test(q);
+            if (isGratitude) {
+                addMessage("You are very welcome! 😊 It is my absolute pleasure to assist you. Let me know if there's anything else you need!");
                 return;
             }
 
@@ -2205,7 +3485,40 @@ function initRoyalChatbot() {
                 }
             }
 
-            // 7. DEFAULT FALLBACK
+            // 7. DEFAULT FALLBACK & OFF-TOPIC CHECK
+            const offTopicIndicators = [
+                'joke', 'riddle', 'weather', 'news', 'president', 'capital', 'country', 'math', 'calculate', 
+                'define', 'meaning of', 'translate', 'cook', 'recipe', 'food', 'restaurant', 'game', 'sport',
+                'movie', 'song', 'music', 'singer', 'actor', 'history', 'science', 'technology', 'code', 
+                'program', 'python', 'javascript', 'html', 'css', 'write a', 'generate a', 'tell me a'
+            ];
+            
+            const boutiqueKeywords = [
+                'dress', 'shirt', 'pant', 'shoe', 'boot', 'heel', 'sandal', 'sneaker', 'clothe', 'wear', 'outfit', 'garment',
+                'catalog', 'item', 'product', 'collection', 'ladies', 'women', 'kids', 'children', 'boy', 'girl',
+                'shipping', 'delivery', 'return', 'refund', 'exchange', 'cancel', 'contact', 'support', 'whatsapp', 'instagram',
+                'phone', 'price', 'cost', 'buy', 'order', 'purchase', 'size', 'fit', 'material', 'fabric', 'silk', 'cotton',
+                'frock', 'kurti', 'saree', 'top', 'jeans', 'tshirt', 'skirt', 'jacket', 'coat', 'boutique', 'shop', 'store',
+                'jewelry', 'cosmetic', 'earring', 'necklace', 'makeup', 'lip', 'skin', 'perfume', 'fragrance',
+                'innerwear', 'underwear', 'bra', 'brief', 'sock', 'vest', 'stock', 'list', 'show', 'search', 'find'
+            ];
+
+            const hasBoutiqueKeyword = boutiqueKeywords.some(keyword => q.includes(keyword));
+            const hasOffTopicIndicator = offTopicIndicators.some(indicator => q.includes(indicator));
+            const isGeneralQuestion = /^(what|how|why|who|where|when|can\s+you\s+tell|tell\s+me)\b/i.test(q) && !hasBoutiqueKeyword;
+
+            if (hasOffTopicIndicator || isGeneralQuestion) {
+                addMessage("I am the <strong>Royal Assistant</strong>, specialized in helping you discover and shop beautiful outfits at our boutique! 👑 I'm not able to answer off-topic questions. Try asking to 'show catalog', or browse our 'Ladies', 'Kids', or 'Shoes' categories!");
+                renderSuggestions([
+                    { text: "📖 Show Catalog", val: "show catalog" },
+                    { text: "👗 Shop Ladies", val: "Ladies Category" },
+                    { text: "🧸 Kids Clothes", val: "Kids Category" },
+                    { text: "📦 Shipping Policy", val: "Shipping Policy" },
+                    { text: "↩️ Returns Info", val: "Return Policy" }
+                ]);
+                return;
+            }
+
             addMessage("I searched our boutique, but couldn't find a direct match. Try asking to 'show catalog' to view all dress names, or search for category terms like 'Ladies', 'Kids', or 'Shoes'! 👑");
             renderSuggestions([
                 { text: "📖 Show Catalog", val: "show catalog" },
@@ -2216,13 +3529,18 @@ function initRoyalChatbot() {
             ]);
         }, 1000);
     }
+    updateChatbotVisibility();
 }
 
 // Global Chatbot Initializer Trigger
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => setTimeout(initRoyalChatbot, 1000));
+    document.addEventListener('DOMContentLoaded', () => {
+        initRoyalChatbot();
+        updateChatbotVisibility();
+    });
 } else {
-    setTimeout(initRoyalChatbot, 1000);
+    initRoyalChatbot();
+    updateChatbotVisibility();
 }
 
 // ==========================================================================
@@ -2321,7 +3639,7 @@ let salesChartInstance = null;
 async function loadAdminDashboard() {
     if (!sb) return;
     try {
-        const { data: orders, error: ordersErr } = await sb.from('orders').select('*').order('created_at', { ascending: false });
+        const { data: orders, error: ordersErr } = await sb.from('orders').select('*').neq('status', 'Pending Payment').order('created_at', { ascending: false });
         if (ordersErr) throw ordersErr;
 
         const { data: products, error: productsErr } = await sb.from('products').select('*');
@@ -2452,15 +3770,23 @@ function compileLowStockAlerts(products) {
         return;
     }
 
-    alertsList.innerHTML = lowStockItems.map(item => `
-        <div class="alert-item" onclick="editProduct(${item.id})">
-            <div class="alert-product-info">
-                <span class="alert-product-name">${escapeHtml(item.name)}</span>
-                <span class="alert-product-detail">${escapeHtml(item.detail)}</span>
+    // Sort: 0 stock (out of stock) items at the very top, followed by lowest to highest stock
+    lowStockItems.sort((a, b) => Number(a.stock) - Number(b.stock));
+
+    alertsList.innerHTML = lowStockItems.map(item => {
+        const isOutOfStock = Number(item.stock) === 0;
+        const badgeText = isOutOfStock ? 'OUT OF STOCK' : `${item.stock} left`;
+        const badgeStyle = isOutOfStock ? 'style="background: #991b1b; color: #ffffff;"' : '';
+        return `
+            <div class="alert-item" onclick="editProduct(${item.id})">
+                <div class="alert-product-info">
+                    <span class="alert-product-name">${escapeHtml(item.name)}</span>
+                    <span class="alert-product-detail">${escapeHtml(item.detail)}</span>
+                </div>
+                <span class="alert-badge-red" ${badgeStyle}>${badgeText}</span>
             </div>
-            <span class="alert-badge-red">${item.stock} left</span>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function renderSalesChart(orders) {
