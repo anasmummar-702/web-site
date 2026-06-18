@@ -2515,6 +2515,21 @@ window.handleAiBatchUpload = async function(input) {
         }
 
         const groups = {}; // colorName -> { hex, files: [] }
+        let apparelType = "Dress"; // default fallback
+
+        // Classify the first image in the batch to detect apparel type
+        try {
+            const firstImg = new Image();
+            firstImg.src = URL.createObjectURL(files[0]);
+            await new Promise((resolve, reject) => {
+                firstImg.onload = resolve;
+                firstImg.onerror = reject;
+            });
+            const predictions = await tfModel.classify(firstImg);
+            apparelType = getApparelType(predictions);
+        } catch (classErr) {
+            console.error("Error classifying first image for apparel type:", classErr);
+        }
 
         for (let file of files) {
             try {
@@ -2554,9 +2569,35 @@ window.handleAiBatchUpload = async function(input) {
             });
         }
 
+        // Format color names list
+        const colorNames = Object.keys(groups);
+        let colorNameText = "";
+        if (colorNames.length === 1) {
+            colorNameText = colorNames[0];
+        } else if (colorNames.length === 2) {
+            colorNameText = `${colorNames[0]} and ${colorNames[1]}`;
+        } else if (colorNames.length > 2) {
+            colorNameText = colorNames.slice(0, -1).join(", ") + `, and ${colorNames[colorNames.length - 1]}`;
+        } else {
+            colorNameText = "beautiful";
+        }
+
+        // Generate description
+        const descriptionTemplate = `A stunning ${colorNameText} ${apparelType} featuring a comfortable and elegant design. Perfect for everyday wear, this piece offers a premium look with high-quality stitching and a flattering fit.`;
+
+        // Append to description field (Plain text, no markdown)
+        const descField = document.getElementById('prod-desc');
+        if (descField) {
+            let textToAdd = `\n\nFabric Details: ${descriptionTemplate}`;
+            if (!descField.value) {
+                textToAdd = textToAdd.trim();
+            }
+            descField.value += textToAdd;
+        }
+
         if (statusEl) {
             statusEl.style.color = '#27ae60';
-            statusEl.innerText = `Auto-grouped into ${Object.keys(groups).length} variants!`;
+            statusEl.innerText = `Auto-grouped into ${Object.keys(groups).length} variants and description appended!`;
             setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
         }
     } catch (err) {
