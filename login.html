@@ -196,7 +196,6 @@
 
     <script src="script.js?v=44.0"></script>
     <script>
-        // Check local storage messages on load and auto-redirect if already logged in
         window.addEventListener('load', async () => {
             // Wait a brief moment to ensure Supabase client in script.js?v=44.0 is initialized
             if (!window.sb) {
@@ -205,7 +204,20 @@
             
             if (window.sb) {
                 try {
-                    const { data: { session } } = await window.sb.auth.getSession();
+                    let session = null;
+                    // Retry checking for active session if localStorage indicates one exists
+                    for (let i = 0; i < 10; i++) {
+                        const { data } = await window.sb.auth.getSession();
+                        if (data && data.session) {
+                            session = data.session;
+                            break;
+                        }
+                        if (typeof window.hasLocalStorageSession === 'function' && !window.hasLocalStorageSession()) {
+                            break;
+                        }
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+
                     if (session) {
                         const { data: isAdmin } = await window.sb.rpc('is_admin');
                         if (isAdmin) {

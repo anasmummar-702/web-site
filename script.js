@@ -21,6 +21,9 @@ window.addEventListener('load', () => {
         const { createClient } = supabase;
         sb = createClient(SUPABASE_URL, SUPABASE_KEY);
         window.sb = sb; // Bind to window so it is accessible globally in production/hosted builds
+        if (typeof initGlobalLoginIcon === 'function') {
+            initGlobalLoginIcon();
+        }
         try {
             sb.auth.onAuthStateChange((event, session) => {
                 if (session && session.user) {
@@ -32,6 +35,9 @@ window.addEventListener('load', () => {
                 }
                 loadNotifications();
                 updateNotificationsCount();
+                if (typeof updateGlobalLoginIcon === 'function') {
+                    updateGlobalLoginIcon(session);
+                }
                 if (window.location.pathname.includes('notifications')) {
                     initNotificationsPage();
                 }
@@ -1627,7 +1633,8 @@ async function initAdmin() {
             if (isAdmin && !rpcErr) {
                 isAdminUser = true;
             } else {
-                await sb.auth.signOut();
+                window.location.href = 'profile.html';
+                return;
             }
         }
 
@@ -3658,56 +3665,88 @@ if (document.readyState === 'loading') {
 // ==========================================================================
 // GLOBAL HEADER LOGIN ICON (Injected into every page)
 // ==========================================================================
+window.hasLocalStorageSession = hasLocalStorageSession;
+function hasLocalStorageSession() {
+    try {
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (key.startsWith('sb-') || key.includes('auth-token') || key === 'supabase.auth.token')) {
+                const token = localStorage.getItem(key);
+                if (token) return true;
+            }
+        }
+    } catch(e) {}
+    return false;
+}
+
+function updateGlobalLoginIcon(session) {
+    const loginLink = document.getElementById('royal-login-icon');
+    if (!loginLink) return;
+
+    const isLoggedIn = (session && session.user) || hasLocalStorageSession();
+    if (isLoggedIn) {
+        loginLink.href = 'profile.html';
+        loginLink.title = 'My Profile';
+        loginLink.innerHTML = '<i class="fas fa-user" style="color: var(--color-accent, #065184);"></i>';
+    } else {
+        loginLink.href = 'login.html';
+        loginLink.title = 'Login / My Account';
+        loginLink.innerHTML = '<i class="far fa-user"></i>';
+    }
+}
+
 async function initGlobalLoginIcon() {
     const headerIcons = document.querySelector('.header-icons');
-    if (!headerIcons || document.getElementById('royal-login-icon')) return;
+    if (!headerIcons) return;
 
-    const style = document.createElement('style');
-    style.innerHTML = `
-        #royal-login-icon {
-            position: relative;
-            font-size: 1.2rem;
-            color: #000000;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            transition: transform 0.2s ease;
-            text-decoration: none;
+    let loginLink = document.getElementById('royal-login-icon');
+    if (!loginLink) {
+        const style = document.createElement('style');
+        style.innerHTML = `
+            #royal-login-icon {
+                position: relative;
+                font-size: 1.2rem;
+                color: #000000;
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                transition: transform 0.2s ease;
+                text-decoration: none;
+            }
+            #royal-login-icon:hover { transform: scale(1.1); color: #000000; }
+        `;
+        document.head.appendChild(style);
+
+        loginLink = document.createElement('a');
+        loginLink.id = 'royal-login-icon';
+        const isLoggedIn = hasLocalStorageSession();
+        loginLink.href = isLoggedIn ? 'profile.html' : 'login.html';
+        loginLink.title = isLoggedIn ? 'My Profile' : 'Login / My Account';
+        loginLink.innerHTML = isLoggedIn 
+            ? '<i class="fas fa-user" style="color: var(--color-accent, #065184);"></i>' 
+            : '<i class="far fa-user"></i>';
+
+        const notifIcon = headerIcons.querySelector('.notification-icon');
+        if (notifIcon) {
+            headerIcons.insertBefore(loginLink, notifIcon);
+        } else {
+            headerIcons.appendChild(loginLink);
         }
-        #royal-login-icon:hover { transform: scale(1.1); color: #000000; }
-    `;
-    document.head.appendChild(style);
-
-    const loginLink = document.createElement('a');
-    loginLink.id = 'royal-login-icon';
-    loginLink.href = 'login.html';
-    loginLink.title = 'Login / My Account';
-    loginLink.innerHTML = '<i class="far fa-user"></i>';
-
-    const notifIcon = headerIcons.querySelector('.notification-icon');
-    if (notifIcon) {
-        headerIcons.insertBefore(loginLink, notifIcon);
-    } else {
-        headerIcons.appendChild(loginLink);
     }
 
     if (sb) {
         try {
             const { data: { session } } = await sb.auth.getSession();
-            if (session) {
-                loginLink.href = 'profile.html';
-                loginLink.title = 'My Profile';
-                loginLink.innerHTML = '<i class="fas fa-user" style="color: var(--color-accent, #065184);"></i>';
-            }
+            updateGlobalLoginIcon(session);
         } catch(e) {}
     }
 }
 
 // Global Login Icon Initializer Trigger
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => setTimeout(initGlobalLoginIcon, 300));
+    document.addEventListener('DOMContentLoaded', () => initGlobalLoginIcon());
 } else {
-    setTimeout(initGlobalLoginIcon, 300);
+    initGlobalLoginIcon();
 }
 
 // ==========================================================================

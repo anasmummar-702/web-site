@@ -477,30 +477,52 @@
                 return;
             }
 
+            let session = null;
             try {
-                const { data: { session }, error } = await window.sb.auth.getSession();
-                if (error || !session) {
-                    localStorage.setItem('login_error', 'Please log in to view your profile.');
-                    window.location.href = 'login.html';
-                    return;
-                }
-
-                currentUser = session.user;
-                setupProfileData();
-                loadUserOrders();
-
-                // Check if admin and show redirect path
-                try {
-                    const { data: isAdmin, error: rpcErr } = await window.sb.rpc('is_admin');
-                    if (isAdmin && !rpcErr) {
-                        showAdminDashboardLink();
+                // Wait for Supabase to recover session if a local session token is detected
+                for (let i = 0; i < 10; i++) {
+                    const { data } = await window.sb.auth.getSession();
+                    if (data && data.session) {
+                        session = data.session;
+                        break;
                     }
-                } catch(err) {
-                    console.error("is_admin check error:", err);
+                    if (typeof window.hasLocalStorageSession === 'function' && !window.hasLocalStorageSession()) {
+                        break;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 100));
                 }
             } catch (e) {
-                console.error("Auth Session Error:", e);
+                console.error("getSession error:", e);
+            }
+
+            if (!session) {
+                localStorage.setItem('login_error', 'Please log in to view your profile.');
                 window.location.href = 'login.html';
+                return;
+            }
+
+            currentUser = session.user;
+
+            try {
+                setupProfileData();
+            } catch (e) {
+                console.error("setupProfileData error:", e);
+            }
+
+            try {
+                loadUserOrders();
+            } catch (e) {
+                console.error("loadUserOrders error:", e);
+            }
+
+            // Check if admin and show redirect path
+            try {
+                const { data: isAdmin, error: rpcErr } = await window.sb.rpc('is_admin');
+                if (isAdmin && !rpcErr) {
+                    showAdminDashboardLink();
+                }
+            } catch(err) {
+                console.error("is_admin check error:", err);
             }
         }
 
