@@ -2299,6 +2299,11 @@ window.handleAiFabricUpload = async function(input) {
             previewImg.src = URL.createObjectURL(file);
         }
         
+        const colorUseCb = document.getElementById('ai-modal-color-use');
+        const secondaryUseCb = document.getElementById('ai-modal-secondary-use');
+        if (colorUseCb) colorUseCb.checked = true;
+        if (secondaryUseCb) secondaryUseCb.checked = true;
+
         if (colorNameEl) colorNameEl.value = 'Analyzing...';
         if (colorHexEl) colorHexEl.value = '';
         if (colorSwatchEl) colorSwatchEl.style.backgroundColor = 'transparent';
@@ -2350,15 +2355,14 @@ window.handleAiFabricUpload = async function(input) {
         const primaryColor = colorData.primary;
         const secondaryColor = colorData.secondary;
 
-        // 3. Generate Smart Description
-        let colorNameText = primaryColor.name;
-        if (secondaryColor) {
-            colorNameText += ` and ${secondaryColor.name}`;
-        }
-        
-        const descriptionTemplate = `A stunning ${colorNameText} ${detectedItem} featuring a comfortable and elegant design. Perfect for everyday wear, this piece offers a premium look with high-quality stitching and a flattering fit.`;
+        // Save analysis data globally for real-time description update & variant creation
+        window.aiAnalysisData = {
+            primary: { name: primaryColor.name, hex: primaryColor.hex },
+            secondary: secondaryColor ? { name: secondaryColor.name, hex: secondaryColor.hex } : null,
+            apparelType: detectedItem
+        };
 
-        // Update Modal
+        // Update Modal inputs
         if (colorNameEl) colorNameEl.value = primaryColor.name;
         if (colorHexEl) colorHexEl.value = primaryColor.hex;
         if (colorSwatchEl) colorSwatchEl.style.backgroundColor = primaryColor.hex;
@@ -2369,9 +2373,12 @@ window.handleAiFabricUpload = async function(input) {
             if (secondaryNameEl) secondaryNameEl.value = secondaryColor.name;
             if (secondaryHexEl) secondaryHexEl.value = secondaryColor.hex;
             if (secondarySwatchEl) secondarySwatchEl.style.backgroundColor = secondaryColor.hex;
+        } else if (secondaryGroup) {
+            secondaryGroup.style.display = 'none';
         }
 
-        if (fabricDescEl) fabricDescEl.value = descriptionTemplate;
+        // Initialize description text in textarea dynamically based on checkboxes
+        window.updateAiModalDescriptionText();
 
         if (statusEl) {
             statusEl.style.color = '#27ae60';
@@ -2399,29 +2406,92 @@ window.closeAiModal = function() {
 };
 
 window.copyAiDetailsToDescription = function() {
-    const colorName = document.getElementById('ai-modal-color-name').value;
-    const secondaryNameEl = document.getElementById('ai-modal-secondary-name');
+    const usePrimary = document.getElementById('ai-modal-color-use')?.checked;
+    const primaryName = document.getElementById('ai-modal-color-name').value.trim();
+    const primaryHex = document.getElementById('ai-modal-color-hex').value.trim();
+    
     const secondaryGroup = document.getElementById('ai-modal-secondary-group');
+    const useSecondary = secondaryGroup && secondaryGroup.style.display !== 'none' && document.getElementById('ai-modal-secondary-use')?.checked;
+    const secondaryName = document.getElementById('ai-modal-secondary-name').value.trim();
+    const secondaryHex = document.getElementById('ai-modal-secondary-hex').value.trim();
+    
     const fabricDesc = document.getElementById('ai-modal-fabric-desc').value;
     
-    if (!colorName && !fabricDesc) return;
+    if (!primaryName && !fabricDesc) return;
     
     const descField = document.getElementById('prod-desc');
     if (descField) {
-        let colorText = colorName;
-        const hasSecondary = secondaryGroup && secondaryGroup.style.display !== 'none' && secondaryNameEl && secondaryNameEl.value;
-        if (hasSecondary) {
-            colorText += ` & ${secondaryNameEl.value}`;
-        }
-        
         let textToAdd = `\n\nFabric Details: ${fabricDesc}`;
         if (!descField.value) {
             textToAdd = textToAdd.trim();
         }
         descField.value += textToAdd;
-        showRoyalToast("Added to Description", `Fabric details added! Please remember to create a variant for the detected color: ${colorText}`, false);
+        
+        let addedVariants = [];
+        if (usePrimary && primaryName) {
+            window.addVariantBlock({ name: primaryName, hex: primaryHex });
+            addedVariants.push(primaryName);
+        }
+        if (useSecondary && secondaryName) {
+            window.addVariantBlock({ name: secondaryName, hex: secondaryHex });
+            addedVariants.push(secondaryName);
+        }
+        
+        let toastMsg = "Fabric details added!";
+        if (addedVariants.length > 0) {
+            toastMsg += ` Color variant${addedVariants.length > 1 ? 's' : ''} created for: ${addedVariants.join(' & ')}`;
+        }
+        showRoyalToast("Added to Description", toastMsg, false);
         closeAiModal();
     }
+};
+
+window.updateAiModalDescriptionText = function() {
+    if (!window.aiAnalysisData) return;
+    
+    const usePrimary = document.getElementById('ai-modal-color-use')?.checked;
+    const secondaryGroup = document.getElementById('ai-modal-secondary-group');
+    const useSecondary = secondaryGroup && secondaryGroup.style.display !== 'none' && document.getElementById('ai-modal-secondary-use')?.checked;
+    
+    let colorNameText = "";
+    if (usePrimary && useSecondary && window.aiAnalysisData.secondary) {
+        colorNameText = `${window.aiAnalysisData.primary.name} and ${window.aiAnalysisData.secondary.name}`;
+    } else if (usePrimary) {
+        colorNameText = window.aiAnalysisData.primary.name;
+    } else if (useSecondary && window.aiAnalysisData.secondary) {
+        colorNameText = window.aiAnalysisData.secondary.name;
+    } else {
+        colorNameText = "beautiful";
+    }
+    
+    const descText = `A stunning ${colorNameText} ${window.aiAnalysisData.apparelType} featuring a comfortable and elegant design. Perfect for everyday wear, this piece offers a premium look with high-quality stitching and a flattering fit.`;
+    
+    const fabricDescEl = document.getElementById('ai-modal-fabric-desc');
+    if (fabricDescEl) fabricDescEl.value = descText;
+};
+
+window.updateColorFromTextInput = function(type) {
+    if (!window.aiAnalysisData) return;
+    
+    if (type === 'primary') {
+        const nameVal = document.getElementById('ai-modal-color-name').value.trim();
+        const hexVal = document.getElementById('ai-modal-color-hex').value.trim();
+        const swatchEl = document.getElementById('ai-modal-color-swatch');
+        
+        window.aiAnalysisData.primary.name = nameVal;
+        window.aiAnalysisData.primary.hex = hexVal;
+        if (swatchEl) swatchEl.style.backgroundColor = hexVal;
+    } else if (type === 'secondary' && window.aiAnalysisData.secondary) {
+        const nameVal = document.getElementById('ai-modal-secondary-name').value.trim();
+        const hexVal = document.getElementById('ai-modal-secondary-hex').value.trim();
+        const swatchEl = document.getElementById('ai-modal-secondary-swatch');
+        
+        window.aiAnalysisData.secondary.name = nameVal;
+        window.aiAnalysisData.secondary.hex = hexVal;
+        if (swatchEl) swatchEl.style.backgroundColor = hexVal;
+    }
+    
+    window.updateAiModalDescriptionText();
 };
 
 window.handleAiBatchUpload = async function(input) {

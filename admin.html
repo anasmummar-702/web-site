@@ -325,21 +325,31 @@
 
             <!-- Primary Color Group -->
             <div class="control-group" style="margin-bottom: 15px;">
-                <label class="control-label">Detected Cloth Color</label>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px;">
+                    <label class="control-label" style="margin-bottom: 0;">Detected Cloth Color</label>
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; color: var(--color-primary); user-select: none;">
+                        <input type="checkbox" id="ai-modal-color-use" checked onchange="window.updateAiModalDescriptionText()" style="accent-color: #111; width: 15px; height: 15px; cursor: pointer;"> Use Color
+                    </label>
+                </div>
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <span id="ai-modal-color-swatch" style="width: 24px; height: 24px; border-radius: 50%; border: 1px solid #cbd5e1; display: inline-block; flex-shrink: 0; background-color: transparent;"></span>
-                    <input type="text" id="ai-modal-color-name" class="select-input" style="flex: 2;" placeholder="Color Name">
-                    <input type="text" id="ai-modal-color-hex" class="select-input" style="flex: 1; text-align: center; font-family: monospace;" placeholder="#000000">
+                    <input type="text" id="ai-modal-color-name" class="select-input" style="flex: 2;" placeholder="Color Name" oninput="window.updateColorFromTextInput('primary')">
+                    <input type="text" id="ai-modal-color-hex" class="select-input" style="flex: 1; text-align: center; font-family: monospace;" placeholder="#000000" oninput="window.updateColorFromTextInput('primary')">
                 </div>
             </div>
 
             <!-- Secondary Color Group (optional) -->
             <div id="ai-modal-secondary-group" class="control-group" style="margin-bottom: 15px; display: none;">
-                <label class="control-label">Secondary Detected Color</label>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px;">
+                    <label class="control-label" style="margin-bottom: 0;">Secondary Detected Color</label>
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; color: var(--color-primary); user-select: none;">
+                        <input type="checkbox" id="ai-modal-secondary-use" checked onchange="window.updateAiModalDescriptionText()" style="accent-color: #111; width: 15px; height: 15px; cursor: pointer;"> Use Color
+                    </label>
+                </div>
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <span id="ai-modal-secondary-swatch" style="width: 24px; height: 24px; border-radius: 50%; border: 1px solid #cbd5e1; display: inline-block; flex-shrink: 0; background-color: transparent;"></span>
-                    <input type="text" id="ai-modal-secondary-name" class="select-input" style="flex: 2;" placeholder="Secondary Color">
-                    <input type="text" id="ai-modal-secondary-hex" class="select-input" style="flex: 1; text-align: center; font-family: monospace;" placeholder="#000000">
+                    <input type="text" id="ai-modal-secondary-name" class="select-input" style="flex: 2;" placeholder="Secondary Color" oninput="window.updateColorFromTextInput('secondary')">
+                    <input type="text" id="ai-modal-secondary-hex" class="select-input" style="flex: 1; text-align: center; font-family: monospace;" placeholder="#000000" oninput="window.updateColorFromTextInput('secondary')">
                 </div>
             </div>
 
