@@ -454,7 +454,7 @@
 
         // Verify active user session on load
         window.addEventListener('load', async () => {
-            if (!sb) {
+            if (!window.sb) {
                 setTimeout(initProfile, 1000);
             } else {
                 initProfile();
@@ -462,13 +462,13 @@
         });
 
         async function initProfile() {
-            if (!sb) {
+            if (!window.sb) {
                 alert('Database client not loaded. Reconnecting...');
                 return;
             }
 
             try {
-                const { data: { session }, error } = await sb.auth.getSession();
+                const { data: { session }, error } = await window.sb.auth.getSession();
                 if (error || !session) {
                     localStorage.setItem('login_error', 'Please log in to view your profile.');
                     window.location.href = 'login.html';
@@ -481,7 +481,7 @@
 
                 // Check if admin and show redirect path
                 try {
-                    const { data: isAdmin, error: rpcErr } = await sb.rpc('is_admin');
+                    const { data: isAdmin, error: rpcErr } = await window.sb.rpc('is_admin');
                     if (isAdmin && !rpcErr) {
                         showAdminDashboardLink();
                     }
@@ -642,7 +642,7 @@
             btn.textContent = 'Saving Details...';
 
             try {
-                const { data, error } = await sb.auth.updateUser({
+                const { data, error } = await window.sb.auth.updateUser({
                     data: {
                         full_name: name,
                         phone: phone,
@@ -683,7 +683,7 @@
             try {
                 console.log("loadUserOrders: currentUser.email =", currentUser.email);
                 // Fetch orders
-                const { data: orders, error } = await sb.from('orders')
+                const { data: orders, error } = await window.sb.from('orders')
                     .select('*')
                     .eq('customer_email', currentUser.email)
                     .neq('status', 'Pending Payment')
@@ -804,7 +804,7 @@
                     "Are you sure you want to log out of your account?",
                     async () => {
                         try {
-                            await sb.auth.signOut();
+                            await window.sb.auth.signOut();
                             window.location.href = 'index.html';
                         } catch (err) {
                             alert("Sign out error: " + err.message);
@@ -813,7 +813,7 @@
                 );
             } else {
                 if (confirm("Are you sure you want to log out of your account?")) {
-                    sb.auth.signOut().then(() => {
+                    window.sb.auth.signOut().then(() => {
                         window.location.href = 'index.html';
                     });
                 }
