@@ -2414,7 +2414,7 @@ window.copyAiDetailsToDescription = function() {
             colorText += ` & ${secondaryNameEl.value}`;
         }
         
-        let textToAdd = `\n\n---\n**Fabric Details:** ${fabricDesc}`;
+        let textToAdd = `\n\nFabric Details: ${fabricDesc}`;
         if (!descField.value) {
             textToAdd = textToAdd.trim();
         }
