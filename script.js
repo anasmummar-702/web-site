@@ -552,8 +552,9 @@ window.openCheckout = async function() {
                 if (custName && !custName.value && metadata.full_name) {
                     custName.value = metadata.full_name;
                 }
-                if (custEmail && !custEmail.value && user.email) {
+                if (custEmail && user.email) {
                     custEmail.value = user.email;
+                    custEmail.readOnly = true;
                 }
                 if (custPhone && !custPhone.value && metadata.phone) {
                     const cleanPhone = metadata.phone.replace(/\D/g, '');
@@ -978,10 +979,10 @@ async function initProductDetail() {
         
         let variants = Array.isArray(p.variants) ? p.variants : [{ name: "Standard", images: [p.image_url], sizes: p.variants?.options || [{size:"Standard", price: p.price, stock: p.stock_quantity}] }];
         
-        const imgGroup = document.getElementById('variant-images-group');
-        const imgContainer = document.getElementById('variant-images-container');
-        const swatchGroup = document.getElementById('variant-swatches-group');
-        const swatchContainer = document.getElementById('variant-swatches-container');
+        const imgGroup = document.getElementById('variant-selector-group');
+        const imgContainer = document.getElementById('variant-buttons-container');
+        const swatchGroup = null;
+        const swatchContainer = null;
         
         // State tracking variables
         let selectedPrice = p.price;
@@ -1074,56 +1075,59 @@ async function initProductDetail() {
             };
         }
         
-        if (variants.length > 0) {
-            if (imgGroup && imgContainer) {
-                imgGroup.style.display = 'block';
-                imgContainer.innerHTML = '';
-            }
-            
-            const hasHex = variants.some(v => v.hex);
-            if (swatchGroup && swatchContainer) {
-                if (hasHex) {
-                    swatchGroup.style.display = 'block';
-                    swatchContainer.innerHTML = '';
-                } else {
-                    swatchGroup.style.display = 'none';
-                }
-            }
+        const hasRealVariants = variants.length > 1 || (variants.length === 1 && variants[0].name !== "Standard");
+        if (hasRealVariants && imgGroup && imgContainer) {
+            imgGroup.style.display = 'block';
+            imgContainer.innerHTML = '';
             
             variants.forEach((v, i) => {
-                // 1. Primary Image Selector
-                if (imgContainer) {
-                    const b = document.createElement('button');
-                    b.className = 'variant-btn';
-                    b.title = v.name;
-                    const img = document.createElement('img');
-                    img.src = v.images && v.images.length > 0 ? v.images[0] : p.image_url;
-                    b.appendChild(img);
-                    b.onclick = () => selectVariant(i);
-                    imgContainer.appendChild(b);
-                }
+                const b = document.createElement('button');
+                b.className = 'variant-btn';
+                b.title = v.name;
+                b.onclick = () => selectVariant(i);
                 
-                // 2. Swatch Selector (if hasHex)
-                if (hasHex && swatchContainer) {
-                    const b = document.createElement('button');
-                    b.className = 'swatch-btn';
-                    b.title = v.name;
-                    b.style.backgroundColor = v.hex || '#cccccc';
-                    b.onclick = () => selectVariant(i);
-                    swatchContainer.appendChild(b);
+                if (v.images && v.images.length > 0) {
+                    const img = document.createElement('img');
+                    img.src = v.images[0];
+                    b.appendChild(img);
+                } else if (v.hex) {
+                    const swatchInner = document.createElement('span');
+                    swatchInner.style.width = '100%';
+                    swatchInner.style.height = '100%';
+                    swatchInner.style.borderRadius = '50%';
+                    swatchInner.style.backgroundColor = v.hex;
+                    swatchInner.style.display = 'block';
+                    b.appendChild(swatchInner);
+                } else {
+                    b.style.borderRadius = 'var(--radius-sm)';
+                    b.style.width = 'auto';
+                    b.style.height = 'auto';
+                    b.style.padding = '8px 12px';
+                    b.innerText = v.name;
                 }
+                imgContainer.appendChild(b);
             });
+            
+            selectVariant(0);
+        } else {
+            if (imgGroup) imgGroup.style.display = 'none';
             selectVariant(0);
         }
         
         function selectVariant(idx) {
-            // Update active states for both image and swatch selector lists
+            // Update active states for variant buttons
             const imageBtns = imgContainer ? imgContainer.querySelectorAll('.variant-btn') : [];
-            const swatchBtns = swatchContainer ? swatchContainer.querySelectorAll('.swatch-btn') : [];
             imageBtns.forEach((b, i) => b.classList.toggle('active', i === idx));
-            swatchBtns.forEach((b, i) => b.classList.toggle('active', i === idx));
+            
             const v = variants[idx];
             selectedVariantName = v.name;
+            
+            // Dynamically show the selected variant name in the control label
+            const labelEl = document.querySelector('#variant-selector-group .control-label');
+            if (labelEl) {
+                labelEl.innerText = `Select Option (Color/Style): ${v.name}`;
+            }
+            
             selectedImage = v.images && v.images.length > 0 ? v.images[0] : p.image_url;
             
             const detailImg = document.getElementById('detail-img');
@@ -1973,168 +1977,719 @@ function rgbToHsl(r, g, b) {
     };
 }
 
+const GAMMA_LOOKUP = new Float32Array(256);
+for (let i = 0; i < 256; i++) {
+    let val = i / 255;
+    GAMMA_LOOKUP[i] = val > 0.04045 ? Math.pow((val + 0.055) / 1.055, 2.4) : val / 12.92;
+}
+
+function rgbToLab(r, g, b) {
+    const rN = GAMMA_LOOKUP[r];
+    const gN = GAMMA_LOOKUP[g];
+    const bN = GAMMA_LOOKUP[b];
+
+    let x = rN * 0.4124 + gN * 0.3576 + bN * 0.1805;
+    let y = rN * 0.2126 + gN * 0.7152 + bN * 0.0722;
+    let z = rN * 0.0193 + gN * 0.1192 + bN * 0.9505;
+
+    x /= 0.95047;
+    y /= 1.00000;
+    z /= 1.08883;
+
+    x = x > 0.008856 ? Math.cbrt(x) : (7.787 * x) + (16/116);
+    y = y > 0.008856 ? Math.cbrt(y) : (7.787 * y) + (16/116);
+    z = z > 0.008856 ? Math.cbrt(z) : (7.787 * z) + (16/116);
+
+    const L = (116 * y) - 16;
+    const a = 500 * (x - y);
+    const b_val = 200 * (y - z);
+
+    return { L, a, b: b_val };
+}
+
+const COLOR_SHADES = [
+    { name: "Grey", hex: "#545454", r: 84, g: 84, b: 84, baseColor: "gray" },
+    { name: "Grey", hex: "#C0C0C0", r: 192, g: 192, b: 192, baseColor: "gray" },
+    { name: "grey", hex: "#BEBEBE", r: 190, g: 190, b: 190, baseColor: "gray" },
+    { name: "LightGray", hex: "#D3D3D3", r: 211, g: 211, b: 211, baseColor: "gray" },
+    { name: "LightSlateGrey", hex: "#778899", r: 119, g: 136, b: 153, baseColor: "blue" },
+    { name: "SlateGray", hex: "#708090", r: 112, g: 128, b: 144, baseColor: "blue" },
+    { name: "SlateGray1", hex: "#C6E2FF", r: 198, g: 226, b: 255, baseColor: "blue" },
+    { name: "SlateGray2", hex: "#B9D3EE", r: 185, g: 211, b: 238, baseColor: "blue" },
+    { name: "SlateGray3", hex: "#9FB6CD", r: 159, g: 182, b: 205, baseColor: "blue" },
+    { name: "SlateGray4", hex: "#6C7B8B", r: 108, g: 123, b: 139, baseColor: "blue" },
+    { name: "black", hex: "#000000", r: 0, g: 0, b: 0, baseColor: "black" },
+    { name: "grey0", hex: "#000000", r: 0, g: 0, b: 0, baseColor: "black" },
+    { name: "grey1", hex: "#030303", r: 3, g: 3, b: 3, baseColor: "black" },
+    { name: "grey2", hex: "#050505", r: 5, g: 5, b: 5, baseColor: "black" },
+    { name: "grey3", hex: "#080808", r: 8, g: 8, b: 8, baseColor: "black" },
+    { name: "grey4", hex: "#0A0A0A", r: 10, g: 10, b: 10, baseColor: "black" },
+    { name: "grey5", hex: "#0D0D0D", r: 13, g: 13, b: 13, baseColor: "black" },
+    { name: "grey6", hex: "#0F0F0F", r: 15, g: 15, b: 15, baseColor: "black" },
+    { name: "grey7", hex: "#121212", r: 18, g: 18, b: 18, baseColor: "black" },
+    { name: "grey8", hex: "#141414", r: 20, g: 20, b: 20, baseColor: "black" },
+    { name: "grey9", hex: "#171717", r: 23, g: 23, b: 23, baseColor: "black" },
+    { name: "grey10", hex: "#1A1A1A", r: 26, g: 26, b: 26, baseColor: "black" },
+    { name: "grey11", hex: "#1C1C1C", r: 28, g: 28, b: 28, baseColor: "black" },
+    { name: "grey12", hex: "#1F1F1F", r: 31, g: 31, b: 31, baseColor: "gray" },
+    { name: "grey13", hex: "#212121", r: 33, g: 33, b: 33, baseColor: "gray" },
+    { name: "grey14", hex: "#242424", r: 36, g: 36, b: 36, baseColor: "gray" },
+    { name: "grey15", hex: "#262626", r: 38, g: 38, b: 38, baseColor: "gray" },
+    { name: "grey16", hex: "#292929", r: 41, g: 41, b: 41, baseColor: "gray" },
+    { name: "grey17", hex: "#2B2B2B", r: 43, g: 43, b: 43, baseColor: "gray" },
+    { name: "grey18", hex: "#2E2E2E", r: 46, g: 46, b: 46, baseColor: "gray" },
+    { name: "grey19", hex: "#303030", r: 48, g: 48, b: 48, baseColor: "gray" },
+    { name: "grey20", hex: "#333333", r: 51, g: 51, b: 51, baseColor: "gray" },
+    { name: "grey21", hex: "#363636", r: 54, g: 54, b: 54, baseColor: "gray" },
+    { name: "grey22", hex: "#383838", r: 56, g: 56, b: 56, baseColor: "gray" },
+    { name: "grey23", hex: "#3B3B3B", r: 59, g: 59, b: 59, baseColor: "gray" },
+    { name: "grey24", hex: "#3D3D3D", r: 61, g: 61, b: 61, baseColor: "gray" },
+    { name: "grey25", hex: "#404040", r: 64, g: 64, b: 64, baseColor: "gray" },
+    { name: "grey26", hex: "#424242", r: 66, g: 66, b: 66, baseColor: "gray" },
+    { name: "grey27", hex: "#454545", r: 69, g: 69, b: 69, baseColor: "gray" },
+    { name: "grey28", hex: "#474747", r: 71, g: 71, b: 71, baseColor: "gray" },
+    { name: "grey29", hex: "#4A4A4A", r: 74, g: 74, b: 74, baseColor: "gray" },
+    { name: "grey30", hex: "#4D4D4D", r: 77, g: 77, b: 77, baseColor: "gray" },
+    { name: "grey31", hex: "#4F4F4F", r: 79, g: 79, b: 79, baseColor: "gray" },
+    { name: "grey32", hex: "#525252", r: 82, g: 82, b: 82, baseColor: "gray" },
+    { name: "grey33", hex: "#545454", r: 84, g: 84, b: 84, baseColor: "gray" },
+    { name: "grey34", hex: "#575757", r: 87, g: 87, b: 87, baseColor: "gray" },
+    { name: "grey35", hex: "#595959", r: 89, g: 89, b: 89, baseColor: "gray" },
+    { name: "grey36", hex: "#5C5C5C", r: 92, g: 92, b: 92, baseColor: "gray" },
+    { name: "grey37", hex: "#5E5E5E", r: 94, g: 94, b: 94, baseColor: "gray" },
+    { name: "grey38", hex: "#616161", r: 97, g: 97, b: 97, baseColor: "gray" },
+    { name: "grey39", hex: "#636363", r: 99, g: 99, b: 99, baseColor: "gray" },
+    { name: "grey40", hex: "#666666", r: 102, g: 102, b: 102, baseColor: "gray" },
+    { name: "grey41", hex: "#696969", r: 105, g: 105, b: 105, baseColor: "gray" },
+    { name: "grey42", hex: "#6B6B6B", r: 107, g: 107, b: 107, baseColor: "gray" },
+    { name: "grey43", hex: "#6E6E6E", r: 110, g: 110, b: 110, baseColor: "gray" },
+    { name: "grey44", hex: "#707070", r: 112, g: 112, b: 112, baseColor: "gray" },
+    { name: "grey45", hex: "#737373", r: 115, g: 115, b: 115, baseColor: "gray" },
+    { name: "grey46", hex: "#757575", r: 117, g: 117, b: 117, baseColor: "gray" },
+    { name: "grey47", hex: "#787878", r: 120, g: 120, b: 120, baseColor: "gray" },
+    { name: "grey48", hex: "#7A7A7A", r: 122, g: 122, b: 122, baseColor: "gray" },
+    { name: "grey49", hex: "#7D7D7D", r: 125, g: 125, b: 125, baseColor: "gray" },
+    { name: "grey50", hex: "#7F7F7F", r: 127, g: 127, b: 127, baseColor: "gray" },
+    { name: "grey51", hex: "#828282", r: 130, g: 130, b: 130, baseColor: "gray" },
+    { name: "grey52", hex: "#858585", r: 133, g: 133, b: 133, baseColor: "gray" },
+    { name: "grey53", hex: "#878787", r: 135, g: 135, b: 135, baseColor: "gray" },
+    { name: "grey54", hex: "#8A8A8A", r: 138, g: 138, b: 138, baseColor: "gray" },
+    { name: "grey55", hex: "#8C8C8C", r: 140, g: 140, b: 140, baseColor: "gray" },
+    { name: "grey56", hex: "#8F8F8F", r: 143, g: 143, b: 143, baseColor: "gray" },
+    { name: "grey57", hex: "#919191", r: 145, g: 145, b: 145, baseColor: "gray" },
+    { name: "grey58", hex: "#949494", r: 148, g: 148, b: 148, baseColor: "gray" },
+    { name: "grey59", hex: "#969696", r: 150, g: 150, b: 150, baseColor: "gray" },
+    { name: "grey60", hex: "#999999", r: 153, g: 153, b: 153, baseColor: "gray" },
+    { name: "grey61", hex: "#9C9C9C", r: 156, g: 156, b: 156, baseColor: "gray" },
+    { name: "grey62", hex: "#9E9E9E", r: 158, g: 158, b: 158, baseColor: "gray" },
+    { name: "grey63", hex: "#A1A1A1", r: 161, g: 161, b: 161, baseColor: "gray" },
+    { name: "grey64", hex: "#A3A3A3", r: 163, g: 163, b: 163, baseColor: "gray" },
+    { name: "grey65", hex: "#A6A6A6", r: 166, g: 166, b: 166, baseColor: "gray" },
+    { name: "grey66", hex: "#A8A8A8", r: 168, g: 168, b: 168, baseColor: "gray" },
+    { name: "grey67", hex: "#ABABAB", r: 171, g: 171, b: 171, baseColor: "gray" },
+    { name: "grey68", hex: "#ADADAD", r: 173, g: 173, b: 173, baseColor: "gray" },
+    { name: "grey69", hex: "#B0B0B0", r: 176, g: 176, b: 176, baseColor: "gray" },
+    { name: "grey70", hex: "#B3B3B3", r: 179, g: 179, b: 179, baseColor: "gray" },
+    { name: "grey71", hex: "#B5B5B5", r: 181, g: 181, b: 181, baseColor: "gray" },
+    { name: "grey72", hex: "#B8B8B8", r: 184, g: 184, b: 184, baseColor: "gray" },
+    { name: "grey73", hex: "#BABABA", r: 186, g: 186, b: 186, baseColor: "gray" },
+    { name: "grey74", hex: "#BDBDBD", r: 189, g: 189, b: 189, baseColor: "gray" },
+    { name: "grey75", hex: "#BFBFBF", r: 191, g: 191, b: 191, baseColor: "gray" },
+    { name: "grey76", hex: "#C2C2C2", r: 194, g: 194, b: 194, baseColor: "gray" },
+    { name: "grey77", hex: "#C4C4C4", r: 196, g: 196, b: 196, baseColor: "gray" },
+    { name: "grey78", hex: "#C7C7C7", r: 199, g: 199, b: 199, baseColor: "gray" },
+    { name: "grey79", hex: "#C9C9C9", r: 201, g: 201, b: 201, baseColor: "gray" },
+    { name: "grey80", hex: "#CCCCCC", r: 204, g: 204, b: 204, baseColor: "gray" },
+    { name: "grey81", hex: "#CFCFCF", r: 207, g: 207, b: 207, baseColor: "gray" },
+    { name: "grey82", hex: "#D1D1D1", r: 209, g: 209, b: 209, baseColor: "gray" },
+    { name: "grey83", hex: "#D4D4D4", r: 212, g: 212, b: 212, baseColor: "gray" },
+    { name: "grey84", hex: "#D6D6D6", r: 214, g: 214, b: 214, baseColor: "gray" },
+    { name: "grey85", hex: "#D9D9D9", r: 217, g: 217, b: 217, baseColor: "gray" },
+    { name: "grey86", hex: "#DBDBDB", r: 219, g: 219, b: 219, baseColor: "gray" },
+    { name: "grey87", hex: "#DEDEDE", r: 222, g: 222, b: 222, baseColor: "gray" },
+    { name: "grey88", hex: "#E0E0E0", r: 224, g: 224, b: 224, baseColor: "gray" },
+    { name: "grey89", hex: "#E3E3E3", r: 227, g: 227, b: 227, baseColor: "gray" },
+    { name: "grey90", hex: "#E5E5E5", r: 229, g: 229, b: 229, baseColor: "gray" },
+    { name: "grey91", hex: "#E8E8E8", r: 232, g: 232, b: 232, baseColor: "gray" },
+    { name: "grey92", hex: "#EBEBEB", r: 235, g: 235, b: 235, baseColor: "gray" },
+    { name: "grey93", hex: "#EDEDED", r: 237, g: 237, b: 237, baseColor: "white" },
+    { name: "grey94", hex: "#F0F0F0", r: 240, g: 240, b: 240, baseColor: "white" },
+    { name: "grey95", hex: "#F2F2F2", r: 242, g: 242, b: 242, baseColor: "white" },
+    { name: "grey96", hex: "#F5F5F5", r: 245, g: 245, b: 245, baseColor: "white" },
+    { name: "grey97", hex: "#F7F7F7", r: 247, g: 247, b: 247, baseColor: "white" },
+    { name: "grey98", hex: "#FAFAFA", r: 250, g: 250, b: 250, baseColor: "white" },
+    { name: "grey99", hex: "#FCFCFC", r: 252, g: 252, b: 252, baseColor: "white" },
+    { name: "grey100", hex: "#FFFFFF", r: 255, g: 255, b: 255, baseColor: "white" },
+    { name: "Dark Slate Grey", hex: "#2F4F4F", r: 47, g: 79, b: 79, baseColor: "teal" },
+    { name: "Dim Grey", hex: "#545454", r: 84, g: 84, b: 84, baseColor: "gray" },
+    { name: "Very Light Grey", hex: "#CDCDCD", r: 205, g: 205, b: 205, baseColor: "gray" },
+    { name: "Free Speech Grey", hex: "#635688", r: 99, g: 86, b: 136, baseColor: "purple" },
+    { name: "AliceBlue", hex: "#F0F8FF", r: 240, g: 248, b: 255, baseColor: "blue" },
+    { name: "BlueViolet", hex: "#8A2BE2", r: 138, g: 43, b: 226, baseColor: "purple" },
+    { name: "Cadet Blue", hex: "#5F9F9F", r: 95, g: 159, b: 159, baseColor: "teal" },
+    { name: "CadetBlue", hex: "#5F9EA0", r: 95, g: 158, b: 160, baseColor: "teal" },
+    { name: "CadetBlue", hex: "#5F9EA0", r: 95, g: 158, b: 160, baseColor: "teal" },
+    { name: "CadetBlue1", hex: "#98F5FF", r: 152, g: 245, b: 255, baseColor: "teal" },
+    { name: "CadetBlue2", hex: "#8EE5EE", r: 142, g: 229, b: 238, baseColor: "teal" },
+    { name: "CadetBlue3", hex: "#7AC5CD", r: 122, g: 197, b: 205, baseColor: "teal" },
+    { name: "CadetBlue4", hex: "#53868B", r: 83, g: 134, b: 139, baseColor: "teal" },
+    { name: "Corn Flower Blue", hex: "#42426F", r: 66, g: 66, b: 111, baseColor: "blue" },
+    { name: "CornflowerBlue", hex: "#6495ED", r: 100, g: 149, b: 237, baseColor: "blue" },
+    { name: "DarkSlateBlue", hex: "#483D8B", r: 72, g: 61, b: 139, baseColor: "blue" },
+    { name: "DarkTurquoise", hex: "#00CED1", r: 0, g: 206, b: 209, baseColor: "teal" },
+    { name: "DeepSkyBlue", hex: "#00BFFF", r: 0, g: 191, b: 255, baseColor: "blue" },
+    { name: "DeepSkyBlue1", hex: "#00BFFF", r: 0, g: 191, b: 255, baseColor: "blue" },
+    { name: "DeepSkyBlue2", hex: "#00B2EE", r: 0, g: 178, b: 238, baseColor: "blue" },
+    { name: "DeepSkyBlue3", hex: "#009ACD", r: 0, g: 154, b: 205, baseColor: "blue" },
+    { name: "DeepSkyBlue4", hex: "#00688B", r: 0, g: 104, b: 139, baseColor: "blue" },
+    { name: "DodgerBlue", hex: "#1E90FF", r: 30, g: 144, b: 255, baseColor: "blue" },
+    { name: "DodgerBlue1", hex: "#1E90FF", r: 30, g: 144, b: 255, baseColor: "blue" },
+    { name: "DodgerBlue2", hex: "#1C86EE", r: 28, g: 134, b: 238, baseColor: "blue" },
+    { name: "DodgerBlue3", hex: "#1874CD", r: 24, g: 116, b: 205, baseColor: "blue" },
+    { name: "DodgerBlue4", hex: "#104E8B", r: 16, g: 78, b: 139, baseColor: "blue" },
+    { name: "LightBlue", hex: "#ADD8E6", r: 173, g: 216, b: 230, baseColor: "blue" },
+    { name: "LightBlue1", hex: "#BFEFFF", r: 191, g: 239, b: 255, baseColor: "blue" },
+    { name: "LightBlue2", hex: "#B2DFEE", r: 178, g: 223, b: 238, baseColor: "blue" },
+    { name: "LightBlue3", hex: "#9AC0CD", r: 154, g: 192, b: 205, baseColor: "blue" },
+    { name: "LightBlue4", hex: "#68838B", r: 104, g: 131, b: 139, baseColor: "teal" },
+    { name: "LightCyan", hex: "#E0FFFF", r: 224, g: 255, b: 255, baseColor: "teal" },
+    { name: "LightCyan1", hex: "#E0FFFF", r: 224, g: 255, b: 255, baseColor: "teal" },
+    { name: "LightCyan2", hex: "#D1EEEE", r: 209, g: 238, b: 238, baseColor: "teal" },
+    { name: "LightCyan3", hex: "#B4CDCD", r: 180, g: 205, b: 205, baseColor: "teal" },
+    { name: "LightCyan4", hex: "#7A8B8B", r: 122, g: 139, b: 139, baseColor: "teal" },
+    { name: "LightSkyBlue", hex: "#87CEFA", r: 135, g: 206, b: 250, baseColor: "blue" },
+    { name: "LightSkyBlue1", hex: "#B0E2FF", r: 176, g: 226, b: 255, baseColor: "blue" },
+    { name: "LightSkyBlue2", hex: "#A4D3EE", r: 164, g: 211, b: 238, baseColor: "blue" },
+    { name: "LightSkyBlue3", hex: "#8DB6CD", r: 141, g: 182, b: 205, baseColor: "blue" },
+    { name: "LightSkyBlue4", hex: "#607B8B", r: 96, g: 123, b: 139, baseColor: "blue" },
+    { name: "LightSlateBlue", hex: "#8470FF", r: 132, g: 112, b: 255, baseColor: "blue" },
+    { name: "LightSteelBlue", hex: "#B0C4DE", r: 176, g: 196, b: 222, baseColor: "blue" },
+    { name: "LightSteelBlue1", hex: "#CAE1FF", r: 202, g: 225, b: 255, baseColor: "blue" },
+    { name: "LightSteelBlue2", hex: "#BCD2EE", r: 188, g: 210, b: 238, baseColor: "blue" },
+    { name: "LightSteelBlue3", hex: "#A2B5CD", r: 162, g: 181, b: 205, baseColor: "blue" },
+    { name: "LightSteelBlue4", hex: "#6E7B8B", r: 110, g: 123, b: 139, baseColor: "blue" },
+    { name: "Aquamarine", hex: "#70DB93", r: 112, g: 219, b: 147, baseColor: "teal" },
+    { name: "MediumBlue", hex: "#0000CD", r: 0, g: 0, b: 205, baseColor: "blue" },
+    { name: "MediumSlateBlue", hex: "#7B68EE", r: 123, g: 104, b: 238, baseColor: "blue" },
+    { name: "MediumTurquoise", hex: "#48D1CC", r: 72, g: 209, b: 204, baseColor: "teal" },
+    { name: "MidnightBlue", hex: "#191970", r: 25, g: 25, b: 112, baseColor: "blue" },
+    { name: "NavyBlue", hex: "#000080", r: 0, g: 0, b: 128, baseColor: "blue" },
+    { name: "PaleTurquoise", hex: "#AFEEEE", r: 175, g: 238, b: 238, baseColor: "teal" },
+    { name: "PaleTurquoise1", hex: "#BBFFFF", r: 187, g: 255, b: 255, baseColor: "teal" },
+    { name: "PaleTurquoise2", hex: "#AEEEEE", r: 174, g: 238, b: 238, baseColor: "teal" },
+    { name: "PaleTurquoise3", hex: "#96CDCD", r: 150, g: 205, b: 205, baseColor: "teal" },
+    { name: "PaleTurquoise4", hex: "#668B8B", r: 102, g: 139, b: 139, baseColor: "teal" },
+    { name: "PowderBlue", hex: "#B0E0E6", r: 176, g: 224, b: 230, baseColor: "teal" },
+    { name: "RoyalBlue", hex: "#000000", r: 65, g: 105, b: 225, baseColor: "blue" },
+    { name: "RoyalBlue1", hex: "#4876FF", r: 72, g: 118, b: 255, baseColor: "blue" },
+    { name: "RoyalBlue2", hex: "#436EEE", r: 67, g: 110, b: 238, baseColor: "blue" },
+    { name: "RoyalBlue3", hex: "#3A5FCD", r: 58, g: 95, b: 205, baseColor: "blue" },
+    { name: "RoyalBlue4", hex: "#27408B", r: 39, g: 64, b: 139, baseColor: "blue" },
+    { name: "RoyalBlue5", hex: "#002266", r: 0, g: 34, b: 102, baseColor: "blue" },
+    { name: "SkyBlue", hex: "#87CEEB", r: 135, g: 206, b: 235, baseColor: "blue" },
+    { name: "SkyBlue1", hex: "#87CEFF", r: 135, g: 206, b: 255, baseColor: "blue" },
+    { name: "SkyBlue2", hex: "#7EC0EE", r: 126, g: 192, b: 238, baseColor: "blue" },
+    { name: "SkyBlue3", hex: "#6CA6CD", r: 108, g: 166, b: 205, baseColor: "blue" },
+    { name: "SkyBlue4", hex: "#4A708B", r: 74, g: 112, b: 139, baseColor: "blue" },
+    { name: "SlateBlue", hex: "#6A5ACD", r: 106, g: 90, b: 205, baseColor: "blue" },
+    { name: "SlateBlue1", hex: "#836FFF", r: 131, g: 111, b: 255, baseColor: "blue" },
+    { name: "SlateBlue2", hex: "#7A67EE", r: 122, g: 103, b: 238, baseColor: "blue" },
+    { name: "SlateBlue3", hex: "#6959CD", r: 105, g: 89, b: 205, baseColor: "blue" },
+    { name: "SlateBlue4", hex: "#473C8B", r: 71, g: 60, b: 139, baseColor: "blue" },
+    { name: "SteelBlue", hex: "#4682B4", r: 70, g: 130, b: 180, baseColor: "blue" },
+    { name: "SteelBlue1", hex: "#63B8FF", r: 99, g: 184, b: 255, baseColor: "blue" },
+    { name: "SteelBlue2", hex: "#5CACEE", r: 92, g: 172, b: 238, baseColor: "blue" },
+    { name: "SteelBlue3", hex: "#4F94CD", r: 79, g: 148, b: 205, baseColor: "blue" },
+    { name: "SteelBlue4", hex: "#36648B", r: 54, g: 100, b: 139, baseColor: "blue" },
+    { name: "aquamarine", hex: "#7FFFD4", r: 127, g: 255, b: 212, baseColor: "teal" },
+    { name: "aquamarine1", hex: "#7FFFD4", r: 127, g: 255, b: 212, baseColor: "teal" },
+    { name: "aquamarine2", hex: "#76EEC6", r: 118, g: 238, b: 198, baseColor: "teal" },
+    { name: "aquamarine3", hex: "#66CDAA", r: 102, g: 205, b: 170, baseColor: "teal" },
+    { name: "aquamarine4", hex: "#458B74", r: 69, g: 139, b: 116, baseColor: "teal" },
+    { name: "azure", hex: "#F0FFFF", r: 240, g: 255, b: 255, baseColor: "teal" },
+    { name: "azure1", hex: "#F0FFFF", r: 240, g: 255, b: 255, baseColor: "teal" },
+    { name: "azure2", hex: "#E0EEEE", r: 224, g: 238, b: 238, baseColor: "teal" },
+    { name: "azure3", hex: "#C1CDCD", r: 193, g: 205, b: 205, baseColor: "gray" },
+    { name: "azure4", hex: "#838B8B", r: 131, g: 139, b: 139, baseColor: "gray" },
+    { name: "blue", hex: "#0000FF", r: 0, g: 0, b: 255, baseColor: "blue" },
+    { name: "blue1", hex: "#0000FF", r: 0, g: 0, b: 255, baseColor: "blue" },
+    { name: "blue2", hex: "#0000EE", r: 0, g: 0, b: 238, baseColor: "blue" },
+    { name: "blue3", hex: "#0000CD", r: 0, g: 0, b: 205, baseColor: "blue" },
+    { name: "blue4", hex: "#00008B", r: 0, g: 0, b: 139, baseColor: "blue" },
+    { name: "aqua", hex: "#00FFFF", r: 0, g: 255, b: 255, baseColor: "teal" },
+    { name: "True Iris Blue", hex: "#03B4CC", r: 3, g: 180, b: 204, baseColor: "teal" },
+    { name: "cyan", hex: "#00FFFF", r: 0, g: 255, b: 255, baseColor: "teal" },
+    { name: "cyan1", hex: "#00FFFF", r: 0, g: 255, b: 255, baseColor: "teal" },
+    { name: "cyan2", hex: "#00EEEE", r: 0, g: 238, b: 238, baseColor: "teal" },
+    { name: "cyan3", hex: "#00CDCD", r: 0, g: 205, b: 205, baseColor: "teal" },
+    { name: "cyan4", hex: "#008B8B", r: 0, g: 139, b: 139, baseColor: "teal" },
+    { name: "navy", hex: "#000080", r: 0, g: 0, b: 128, baseColor: "blue" },
+    { name: "teal", hex: "#008080", r: 0, g: 128, b: 128, baseColor: "teal" },
+    { name: "turquoise", hex: "#40E0D0", r: 64, g: 224, b: 208, baseColor: "teal" },
+    { name: "turquoise1", hex: "#00F5FF", r: 0, g: 245, b: 255, baseColor: "teal" },
+    { name: "turquoise2", hex: "#00E5EE", r: 0, g: 229, b: 238, baseColor: "teal" },
+    { name: "turquoise3", hex: "#00C5CD", r: 0, g: 197, b: 205, baseColor: "teal" },
+    { name: "turquoise4", hex: "#00868B", r: 0, g: 134, b: 139, baseColor: "teal" },
+    { name: "DarkSlateGray", hex: "#2F4F4F", r: 47, g: 79, b: 79, baseColor: "teal" },
+    { name: "DarkSlateGray1", hex: "#97FFFF", r: 151, g: 255, b: 255, baseColor: "teal" },
+    { name: "DarkSlateGray2", hex: "#8DEEEE", r: 141, g: 238, b: 238, baseColor: "teal" },
+    { name: "DarkSlateGray3", hex: "#79CDCD", r: 121, g: 205, b: 205, baseColor: "teal" },
+    { name: "DarkSlateGray4", hex: "#528B8B", r: 82, g: 139, b: 139, baseColor: "teal" },
+    { name: "Dark Slate Blue", hex: "#241882", r: 36, g: 24, b: 130, baseColor: "blue" },
+    { name: "Dark Turquoise", hex: "#7093DB", r: 112, g: 147, b: 219, baseColor: "teal" },
+    { name: "Medium Slate Blue", hex: "#7F00FF", r: 127, g: 0, b: 255, baseColor: "purple" },
+    { name: "Medium Turquoise", hex: "#70DBDB", r: 112, g: 219, b: 219, baseColor: "teal" },
+    { name: "Midnight Blue", hex: "#2F2F4F", r: 47, g: 47, b: 79, baseColor: "blue" },
+    { name: "Navy Blue", hex: "#23238E", r: 35, g: 35, b: 142, baseColor: "blue" },
+    { name: "Neon Blue", hex: "#4D4DFF", r: 77, g: 77, b: 255, baseColor: "blue" },
+    { name: "New Midnight Blue", hex: "#00009C", r: 0, g: 0, b: 156, baseColor: "blue" },
+    { name: "Rich Blue", hex: "#5959AB", r: 89, g: 89, b: 171, baseColor: "blue" },
+    { name: "Sky Blue", hex: "#3299CC", r: 50, g: 153, b: 204, baseColor: "blue" },
+    { name: "Slate Blue", hex: "#007FFF", r: 0, g: 127, b: 255, baseColor: "blue" },
+    { name: "Summer Sky", hex: "#38B0DE", r: 56, g: 176, b: 222, baseColor: "blue" },
+    { name: "Iris Blue", hex: "#03B4C8", r: 3, g: 180, b: 200, baseColor: "teal" },
+    { name: "Free Speech Blue", hex: "#4156C5", r: 65, g: 86, b: 197, baseColor: "blue" },
+    { name: "RosyBrown", hex: "#BC8F8F", r: 188, g: 143, b: 143, baseColor: "brown" },
+    { name: "RosyBrown1", hex: "#FFC1C1", r: 255, g: 193, b: 193, baseColor: "brown" },
+    { name: "RosyBrown2", hex: "#EEB4B4", r: 238, g: 180, b: 180, baseColor: "brown" },
+    { name: "RosyBrown3", hex: "#CD9B9B", r: 205, g: 155, b: 155, baseColor: "brown" },
+    { name: "RosyBrown4", hex: "#8B6969", r: 139, g: 105, b: 105, baseColor: "brown" },
+    { name: "SaddleBrown", hex: "#8B4513", r: 139, g: 69, b: 19, baseColor: "brown" },
+    { name: "SandyBrown", hex: "#F4A460", r: 244, g: 164, b: 96, baseColor: "brown" },
+    { name: "beige", hex: "#F5F5DC", r: 245, g: 245, b: 220, baseColor: "brown" },
+    { name: "brown", hex: "#A52A2A", r: 165, g: 42, b: 42, baseColor: "brown" },
+    { name: "brown", hex: "#A62A2A", r: 166, g: 42, b: 42, baseColor: "brown" },
+    { name: "brown1", hex: "#FF4040", r: 255, g: 64, b: 64, baseColor: "brown" },
+    { name: "brown2", hex: "#EE3B3B", r: 238, g: 59, b: 59, baseColor: "brown" },
+    { name: "brown3", hex: "#CD3333", r: 205, g: 51, b: 51, baseColor: "brown" },
+    { name: "brown4", hex: "#8B2323", r: 139, g: 35, b: 35, baseColor: "brown" },
+    { name: "dark brown", hex: "#5C4033", r: 92, g: 64, b: 51, baseColor: "brown" },
+    { name: "burlywood", hex: "#DEB887", r: 222, g: 184, b: 135, baseColor: "orange" },
+    { name: "burlywood1", hex: "#FFD39B", r: 255, g: 211, b: 155, baseColor: "orange" },
+    { name: "burlywood2", hex: "#EEC591", r: 238, g: 197, b: 145, baseColor: "orange" },
+    { name: "burlywood3", hex: "#CDAA7D", r: 205, g: 170, b: 125, baseColor: "orange" },
+    { name: "burlywood4", hex: "#8B7355", r: 139, g: 115, b: 85, baseColor: "brown" },
+    { name: "baker's chocolate", hex: "#5C3317", r: 92, g: 51, b: 23, baseColor: "brown" },
+    { name: "chocolate", hex: "#D2691E", r: 210, g: 105, b: 30, baseColor: "brown" },
+    { name: "chocolate1", hex: "#FF7F24", r: 255, g: 127, b: 36, baseColor: "brown" },
+    { name: "chocolate2", hex: "#EE7621", r: 238, g: 118, b: 33, baseColor: "brown" },
+    { name: "chocolate3", hex: "#CD661D", r: 205, g: 102, b: 29, baseColor: "brown" },
+    { name: "chocolate4", hex: "#8B4513", r: 139, g: 69, b: 19, baseColor: "brown" },
+    { name: "peru", hex: "#CD853F", r: 205, g: 133, b: 63, baseColor: "orange" },
+    { name: "tan", hex: "#D2B48C", r: 210, g: 180, b: 140, baseColor: "brown" },
+    { name: "tan1", hex: "#FFA54F", r: 255, g: 165, b: 79, baseColor: "brown" },
+    { name: "tan2", hex: "#EE9A49", r: 238, g: 154, b: 73, baseColor: "brown" },
+    { name: "tan3", hex: "#CD853F", r: 205, g: 133, b: 63, baseColor: "brown" },
+    { name: "tan4", hex: "#8B5A2B", r: 139, g: 90, b: 43, baseColor: "brown" },
+    { name: "Dark Tan", hex: "#97694F", r: 151, g: 105, b: 79, baseColor: "brown" },
+    { name: "Dark Wood", hex: "#855E44", r: 133, g: 94, b: 66, baseColor: "brown" },
+    { name: "Light Wood", hex: "#856363", r: 133, g: 99, b: 99, baseColor: "red" },
+    { name: "Medium Wood", hex: "#A68064", r: 166, g: 128, b: 100, baseColor: "orange" },
+    { name: "New Tan", hex: "#EBC79E", r: 235, g: 199, b: 158, baseColor: "brown" },
+    { name: "Semi-Sweet Chocolate", hex: "#6B4226", r: 107, g: 66, b: 38, baseColor: "brown" },
+    { name: "Sienna", hex: "#8E6B23", r: 142, g: 107, b: 35, baseColor: "orange" },
+    { name: "Tan", hex: "#DB9370", r: 219, g: 147, b: 112, baseColor: "brown" },
+    { name: "Very Dark Brown", hex: "#5C4033", r: 92, g: 64, b: 51, baseColor: "brown" },
+    { name: "Dark Green", hex: "#2F4F2F", r: 47, g: 79, b: 47, baseColor: "green" },
+    { name: "DarkGreen", hex: "#006400", r: 0, g: 100, b: 0, baseColor: "green" },
+    { name: "dark green copper", hex: "#4A766E", r: 74, g: 118, b: 110, baseColor: "metallic" },
+    { name: "DarkKhaki", hex: "#BDB76B", r: 189, g: 183, b: 107, baseColor: "yellow" },
+    { name: "DarkOliveGreen", hex: "#556B2F", r: 85, g: 107, b: 47, baseColor: "green" },
+    { name: "DarkOliveGreen1", hex: "#CAFF70", r: 202, g: 255, b: 112, baseColor: "green" },
+    { name: "DarkOliveGreen2", hex: "#BCEE68", r: 188, g: 238, b: 104, baseColor: "green" },
+    { name: "DarkOliveGreen3", hex: "#A2CD5A", r: 162, g: 205, b: 90, baseColor: "green" },
+    { name: "DarkOliveGreen4", hex: "#6E8B3D", r: 110, g: 139, b: 61, baseColor: "green" },
+    { name: "olive", hex: "#808000", r: 128, g: 128, b: 0, baseColor: "green" },
+    { name: "DarkSeaGreen", hex: "#8FBC8F", r: 143, g: 188, b: 143, baseColor: "green" },
+    { name: "DarkSeaGreen1", hex: "#C1FFC1", r: 193, g: 255, b: 193, baseColor: "green" },
+    { name: "DarkSeaGreen2", hex: "#B4EEB4", r: 180, g: 238, b: 180, baseColor: "green" },
+    { name: "DarkSeaGreen3", hex: "#9BCD9B", r: 155, g: 205, b: 155, baseColor: "green" },
+    { name: "DarkSeaGreen4", hex: "#698B69", r: 105, g: 139, b: 105, baseColor: "green" },
+    { name: "ForestGreen", hex: "#228B22", r: 34, g: 139, b: 34, baseColor: "green" },
+    { name: "GreenYellow", hex: "#ADFF2F", r: 173, g: 255, b: 47, baseColor: "green" },
+    { name: "LawnGreen", hex: "#7CFC00", r: 124, g: 252, b: 0, baseColor: "green" },
+    { name: "LightSeaGreen", hex: "#20B2AA", r: 32, g: 178, b: 170, baseColor: "teal" },
+    { name: "LimeGreen", hex: "#32CD32", r: 50, g: 205, b: 50, baseColor: "green" },
+    { name: "MediumSeaGreen", hex: "#3CB371", r: 60, g: 179, b: 113, baseColor: "green" },
+    { name: "MediumSpringGreen", hex: "#00FA9A", r: 0, g: 250, b: 154, baseColor: "green" },
+    { name: "MintCream", hex: "#F5FFFA", r: 245, g: 255, b: 250, baseColor: "green" },
+    { name: "OliveDrab", hex: "#6B8E23", r: 107, g: 142, b: 35, baseColor: "green" },
+    { name: "OliveDrab1", hex: "#C0FF3E", r: 192, g: 255, b: 62, baseColor: "green" },
+    { name: "OliveDrab2", hex: "#B3EE3A", r: 179, g: 238, b: 58, baseColor: "green" },
+    { name: "OliveDrab3", hex: "#9ACD32", r: 154, g: 205, b: 50, baseColor: "green" },
+    { name: "OliveDrab4", hex: "#698B22", r: 105, g: 139, b: 34, baseColor: "green" },
+    { name: "PaleGreen", hex: "#98FB98", r: 152, g: 251, b: 152, baseColor: "green" },
+    { name: "PaleGreen1", hex: "#9AFF9A", r: 154, g: 255, b: 154, baseColor: "green" },
+    { name: "PaleGreen2", hex: "#90EE90", r: 144, g: 238, b: 144, baseColor: "green" },
+    { name: "PaleGreen3", hex: "#7CCD7C", r: 124, g: 205, b: 124, baseColor: "green" },
+    { name: "PaleGreen4", hex: "#548B54", r: 84, g: 139, b: 84, baseColor: "green" },
+    { name: "SeaGreen", hex: "#2E8B57", r: 46, g: 139, b: 87, baseColor: "green" },
+    { name: "SeaGreen1", hex: "#54FF9F", r: 84, g: 255, b: 159, baseColor: "green" },
+    { name: "SeaGreen2", hex: "#4EEE94", r: 78, g: 238, b: 148, baseColor: "green" },
+    { name: "SeaGreen3", hex: "#43CD80", r: 67, g: 205, b: 128, baseColor: "green" },
+    { name: "SpringGreen", hex: "#00FF7F", r: 0, g: 255, b: 127, baseColor: "green" },
+    { name: "SpringGreen1", hex: "#00FF7F", r: 0, g: 255, b: 127, baseColor: "green" },
+    { name: "SpringGreen2", hex: "#00EE76", r: 0, g: 238, b: 118, baseColor: "green" },
+    { name: "SpringGreen3", hex: "#00CD66", r: 0, g: 205, b: 102, baseColor: "green" },
+    { name: "SpringGreen4", hex: "#008B45", r: 0, g: 139, b: 69, baseColor: "green" },
+    { name: "YellowGreen", hex: "#9ACD32", r: 154, g: 205, b: 50, baseColor: "green" },
+    { name: "chartreuse", hex: "#7FFF00", r: 127, g: 255, b: 0, baseColor: "green" },
+    { name: "chartreuse1", hex: "#7FFF00", r: 127, g: 255, b: 0, baseColor: "green" },
+    { name: "chartreuse2", hex: "#76EE00", r: 118, g: 238, b: 0, baseColor: "green" },
+    { name: "chartreuse3", hex: "#66CD00", r: 102, g: 205, b: 0, baseColor: "green" },
+    { name: "chartreuse4", hex: "#458B00", r: 69, g: 139, b: 0, baseColor: "green" },
+    { name: "green", hex: "#00FF00", r: 0, g: 255, b: 0, baseColor: "green" },
+    { name: "green", hex: "#008000", r: 0, g: 128, b: 0, baseColor: "green" },
+    { name: "lime", hex: "#00FF00", r: 0, g: 255, b: 0, baseColor: "green" },
+    { name: "green1", hex: "#00FF00", r: 0, g: 255, b: 0, baseColor: "green" },
+    { name: "green2", hex: "#00EE00", r: 0, g: 238, b: 0, baseColor: "green" },
+    { name: "green3", hex: "#00CD00", r: 0, g: 205, b: 0, baseColor: "green" },
+    { name: "green4", hex: "#008B00", r: 0, g: 139, b: 0, baseColor: "green" },
+    { name: "khaki", hex: "#F0E68C", r: 240, g: 230, b: 140, baseColor: "yellow" },
+    { name: "khaki1", hex: "#FFF68F", r: 255, g: 246, b: 143, baseColor: "yellow" },
+    { name: "khaki2", hex: "#EEE685", r: 238, g: 230, b: 133, baseColor: "yellow" },
+    { name: "khaki3", hex: "#CDC673", r: 205, g: 198, b: 115, baseColor: "yellow" },
+    { name: "khaki4", hex: "#8B864E", r: 139, g: 134, b: 78, baseColor: "yellow" },
+    { name: "Dark Olive Green", hex: "#4F4F2F", r: 79, g: 79, b: 47, baseColor: "green" },
+    { name: "Green Yellow", hex: "#D19275", r: 209, g: 146, b: 117, baseColor: "orange" },
+    { name: "Hunter Green", hex: "#8E2323", r: 142, g: 35, b: 35, baseColor: "red" },
+    { name: "Forest Green", hex: "#23238E", r: 35, g: 142, b: 35, baseColor: "green" },
+    { name: "Medium Forest Green", hex: "#DBDB70", r: 219, g: 219, b: 112, baseColor: "yellow" },
+    { name: "Medium Sea Green", hex: "#426F42", r: 66, g: 111, b: 66, baseColor: "green" },
+    { name: "Medium Spring Green", hex: "#7FFF00", r: 127, g: 255, b: 0, baseColor: "green" },
+    { name: "Pale Green", hex: "#8FBC8F", r: 143, g: 188, b: 143, baseColor: "green" },
+    { name: "Sea Green", hex: "#238E6B", r: 35, g: 142, b: 104, baseColor: "green" },
+    { name: "Spring Green", hex: "#00FF7F", r: 0, g: 255, b: 127, baseColor: "green" },
+    { name: "Free Speech Green", hex: "#09F911", r: 9, g: 249, b: 17, baseColor: "green" },
+    { name: "Free Speech Aquamarine", hex: "#029D74", r: 2, g: 157, b: 116, baseColor: "teal" },
+    { name: "DarkOrange", hex: "#FF8C00", r: 255, g: 140, b: 0, baseColor: "orange" },
+    { name: "DarkOrange1", hex: "#FF7F00", r: 255, g: 127, b: 0, baseColor: "orange" },
+    { name: "DarkOrange2", hex: "#EE7600", r: 238, g: 118, b: 0, baseColor: "orange" },
+    { name: "DarkOrange3", hex: "#CD6600", r: 205, g: 102, b: 0, baseColor: "orange" },
+    { name: "DarkOrange4", hex: "#8B4500", r: 139, g: 69, b: 0, baseColor: "orange" },
+    { name: "DarkSalmon", hex: "#E9967A", r: 233, g: 150, b: 122, baseColor: "orange" },
+    { name: "LightCoral", hex: "#F08080", r: 240, g: 128, b: 128, baseColor: "orange" },
+    { name: "LightSalmon", hex: "#FFA07A", r: 255, g: 160, b: 122, baseColor: "orange" },
+    { name: "LightSalmon1", hex: "#FFA07A", r: 255, g: 160, b: 122, baseColor: "orange" },
+    { name: "LightSalmon2", hex: "#EE9572", r: 238, g: 149, b: 114, baseColor: "orange" },
+    { name: "LightSalmon3", hex: "#CD8162", r: 205, g: 129, b: 98, baseColor: "orange" },
+    { name: "LightSalmon4", hex: "#8B5742", r: 139, g: 87, b: 66, baseColor: "brown" },
+    { name: "PeachPuff", hex: "#FFDAB9", r: 255, g: 218, b: 185, baseColor: "orange" },
+    { name: "PeachPuff1", hex: "#FFDAB9", r: 255, g: 218, b: 185, baseColor: "orange" },
+    { name: "PeachPuff2", hex: "#EECBAD", r: 238, g: 203, b: 173, baseColor: "orange" },
+    { name: "PeachPuff3", hex: "#CDAF95", r: 205, g: 175, b: 149, baseColor: "orange" },
+    { name: "PeachPuff4", hex: "#8B7765", r: 139, g: 119, b: 101, baseColor: "orange" },
+    { name: "bisque", hex: "#FFE4C4", r: 255, g: 228, b: 196, baseColor: "orange" },
+    { name: "bisque1", hex: "#FFE4C4", r: 255, g: 228, b: 196, baseColor: "orange" },
+    { name: "bisque2", hex: "#EED5B7", r: 238, g: 213, b: 183, baseColor: "orange" },
+    { name: "bisque3", hex: "#CDB79E", r: 205, g: 183, b: 158, baseColor: "orange" },
+    { name: "bisque4", hex: "#8B7D6B", r: 139, g: 125, b: 107, baseColor: "orange" },
+    { name: "coral", hex: "#FF7F00", r: 255, g: 127, b: 0, baseColor: "orange" },
+    { name: "coral", hex: "#FF7F50", r: 255, g: 127, b: 80, baseColor: "orange" },
+    { name: "coral1", hex: "#FF7256", r: 255, g: 114, b: 86, baseColor: "orange" },
+    { name: "coral2", hex: "#EE6A50", r: 238, g: 106, b: 80, baseColor: "orange" },
+    { name: "coral3", hex: "#CD5B45", r: 205, g: 91, b: 69, baseColor: "orange" },
+    { name: "coral4", hex: "#8B3E2F", r: 139, g: 62, b: 47, baseColor: "orange" },
+    { name: "honeydew", hex: "#F0FFF0", r: 240, g: 255, b: 240, baseColor: "green" },
+    { name: "honeydew1", hex: "#F0FFF0", r: 240, g: 255, b: 240, baseColor: "green" },
+    { name: "honeydew2", hex: "#E0EEE0", r: 224, g: 238, b: 224, baseColor: "green" },
+    { name: "honeydew3", hex: "#C1CDC1", r: 193, g: 205, b: 193, baseColor: "gray" },
+    { name: "honeydew4", hex: "#838B83", r: 131, g: 139, b: 131, baseColor: "gray" },
+    { name: "orange", hex: "#FFA500", r: 255, g: 165, b: 0, baseColor: "orange" },
+    { name: "orange1", hex: "#FFA500", r: 255, g: 165, b: 0, baseColor: "orange" },
+    { name: "orange2", hex: "#EE9A00", r: 238, g: 154, b: 0, baseColor: "orange" },
+    { name: "orange3", hex: "#CD8500", r: 205, g: 133, b: 0, baseColor: "orange" },
+    { name: "orange4", hex: "#8B5A00", r: 139, g: 90, b: 0, baseColor: "orange" },
+    { name: "salmon", hex: "#FA8072", r: 250, g: 128, b: 114, baseColor: "pink" },
+    { name: "salmon1", hex: "#FF8C69", r: 255, g: 140, b: 105, baseColor: "pink" },
+    { name: "salmon2", hex: "#EE8262", r: 238, g: 130, b: 98, baseColor: "pink" },
+    { name: "salmon3", hex: "#CD7054", r: 205, g: 112, b: 84, baseColor: "red" },
+    { name: "salmon4", hex: "#8B4C39", r: 139, g: 76, b: 57, baseColor: "red" },
+    { name: "sienna", hex: "#A0522D", r: 160, g: 82, b: 45, baseColor: "orange" },
+    { name: "sienna1", hex: "#FF8247", r: 255, g: 130, b: 71, baseColor: "orange" },
+    { name: "sienna2", hex: "#EE7942", r: 238, g: 121, b: 66, baseColor: "orange" },
+    { name: "sienna3", hex: "#CD6839", r: 205, g: 104, b: 57, baseColor: "orange" },
+    { name: "sienna4", hex: "#8B4726", r: 139, g: 71, b: 38, baseColor: "orange" },
+    { name: "Mandarian Orange", hex: "#8E2323", r: 142, g: 35, b: 35, baseColor: "red" },
+    { name: "Orange", hex: "#FF7F00", r: 255, g: 127, b: 0, baseColor: "orange" },
+    { name: "Orange Red", hex: "#FF2400", r: 255, g: 36, b: 0, baseColor: "red" },
+    { name: "DeepPink", hex: "#FF1493", r: 255, g: 20, b: 147, baseColor: "pink" },
+    { name: "DeepPink1", hex: "#FF1493", r: 255, g: 20, b: 147, baseColor: "pink" },
+    { name: "DeepPink2", hex: "#EE1289", r: 238, g: 18, b: 137, baseColor: "pink" },
+    { name: "DeepPink3", hex: "#CD1076", r: 205, g: 16, b: 118, baseColor: "pink" },
+    { name: "DeepPink4", hex: "#8B0A50", r: 139, g: 10, b: 80, baseColor: "pink" },
+    { name: "HotPink", hex: "#FF69B4", r: 255, g: 105, b: 180, baseColor: "pink" },
+    { name: "HotPink1", hex: "#FF6EB4", r: 255, g: 110, b: 180, baseColor: "pink" },
+    { name: "HotPink2", hex: "#EE6AA7", r: 238, g: 106, b: 167, baseColor: "pink" },
+    { name: "HotPink3", hex: "#CD6090", r: 205, g: 96, b: 144, baseColor: "pink" },
+    { name: "HotPink4", hex: "#8B3A62", r: 139, g: 58, b: 98, baseColor: "pink" },
+    { name: "IndianRed", hex: "#CD5C5C", r: 205, g: 92, b: 92, baseColor: "red" },
+    { name: "IndianRed1", hex: "#FF6A6A", r: 255, g: 106, b: 106, baseColor: "pink" },
+    { name: "IndianRed2", hex: "#EE6363", r: 238, g: 99, b: 99, baseColor: "pink" },
+    { name: "IndianRed3", hex: "#CD5555", r: 205, g: 85, b: 85, baseColor: "red" },
+    { name: "IndianRed4", hex: "#8B3A3A", r: 139, g: 58, b: 58, baseColor: "red" },
+    { name: "LightPink", hex: "#FFB6C1", r: 255, g: 182, b: 193, baseColor: "pink" },
+    { name: "LightPink1", hex: "#FFAEB9", r: 255, g: 174, b: 185, baseColor: "pink" },
+    { name: "LightPink2", hex: "#EEA2AD", r: 238, g: 162, b: 173, baseColor: "pink" },
+    { name: "LightPink3", hex: "#CD8C95", r: 205, g: 140, b: 149, baseColor: "pink" },
+    { name: "LightPink4", hex: "#8B5F65", r: 139, g: 95, b: 101, baseColor: "pink" },
+    { name: "MediumVioletRed", hex: "#C71585", r: 199, g: 21, b: 133, baseColor: "purple" },
+    { name: "MistyRose", hex: "#FFE4E1", r: 255, g: 228, b: 225, baseColor: "pink" },
+    { name: "MistyRose1", hex: "#FFE4E1", r: 255, g: 228, b: 225, baseColor: "pink" },
+    { name: "MistyRose2", hex: "#EED5D2", r: 238, g: 213, b: 210, baseColor: "pink" },
+    { name: "MistyRose3", hex: "#CDB7B5", r: 205, g: 183, b: 181, baseColor: "pink" },
+    { name: "MistyRose4", hex: "#8B7D7B", r: 139, g: 125, b: 123, baseColor: "pink" },
+    { name: "OrangeRed", hex: "#FF4500", r: 255, g: 69, b: 0, baseColor: "orange" },
+    { name: "OrangeRed1", hex: "#FF4500", r: 255, g: 69, b: 0, baseColor: "orange" },
+    { name: "OrangeRed2", hex: "#EE4000", r: 238, g: 64, b: 0, baseColor: "orange" },
+    { name: "OrangeRed3", hex: "#CD3700", r: 205, g: 55, b: 0, baseColor: "orange" },
+    { name: "OrangeRed4", hex: "#8B2500", r: 139, g: 37, b: 0, baseColor: "orange" },
+    { name: "PaleVioletRed", hex: "#DB7093", r: 219, g: 112, b: 147, baseColor: "purple" },
+    { name: "PaleVioletRed1", hex: "#FF82AB", r: 255, g: 130, b: 171, baseColor: "purple" },
+    { name: "PaleVioletRed2", hex: "#EE799F", r: 238, g: 121, b: 159, baseColor: "purple" },
+    { name: "PaleVioletRed3", hex: "#CD6889", r: 205, g: 104, b: 137, baseColor: "purple" },
+    { name: "PaleVioletRed4", hex: "#8B475D", r: 139, g: 71, b: 93, baseColor: "purple" },
+    { name: "VioletRed", hex: "#D02090", r: 208, g: 32, b: 144, baseColor: "purple" },
+    { name: "VioletRed1", hex: "#FF3E96", r: 255, g: 62, b: 150, baseColor: "purple" },
+    { name: "VioletRed2", hex: "#EE3A8C", r: 238, g: 58, b: 140, baseColor: "purple" },
+    { name: "VioletRed3", hex: "#CD3278", r: 205, g: 50, b: 120, baseColor: "purple" },
+    { name: "VioletRed4", hex: "#8B2252", r: 139, g: 34, b: 82, baseColor: "purple" },
+    { name: "firebrick", hex: "#B22222", r: 178, g: 34, b: 34, baseColor: "red" },
+    { name: "firebrick1", hex: "#FF3030", r: 255, g: 48, b: 48, baseColor: "red" },
+    { name: "firebrick2", hex: "#EE2C2C", r: 238, g: 44, b: 44, baseColor: "red" },
+    { name: "firebrick3", hex: "#CD2626", r: 205, g: 38, b: 38, baseColor: "red" },
+    { name: "firebrick4", hex: "#8B1A1A", r: 139, g: 26, b: 26, baseColor: "red" },
+    { name: "pink", hex: "#FFC0CB", r: 255, g: 192, b: 203, baseColor: "pink" },
+    { name: "pink1", hex: "#FFB5C5", r: 255, g: 181, b: 197, baseColor: "pink" },
+    { name: "pink2", hex: "#EEA9B8", r: 238, g: 169, b: 184, baseColor: "pink" },
+    { name: "pink3", hex: "#CD919E", r: 205, g: 145, b: 158, baseColor: "pink" },
+    { name: "pink4", hex: "#8B636C", r: 139, g: 99, b: 108, baseColor: "pink" },
+    { name: "Flesh", hex: "#F5CCB0", r: 245, g: 204, b: 176, baseColor: "orange" },
+    { name: "Feldspar", hex: "#D19275", r: 209, g: 146, b: 117, baseColor: "orange" },
+    { name: "red", hex: "#FF0000", r: 255, g: 0, b: 0, baseColor: "red" },
+    { name: "red1", hex: "#FF0000", r: 255, g: 0, b: 0, baseColor: "red" },
+    { name: "red2", hex: "#EE0000", r: 238, g: 0, b: 0, baseColor: "red" },
+    { name: "red3", hex: "#CD0000", r: 205, g: 0, b: 0, baseColor: "red" },
+    { name: "red4", hex: "#8B0000", r: 139, g: 0, b: 0, baseColor: "red" },
+    { name: "tomato", hex: "#FF6347", r: 255, g: 99, b: 71, baseColor: "pink" },
+    { name: "tomato1", hex: "#FF6347", r: 255, g: 99, b: 71, baseColor: "pink" },
+    { name: "tomato2", hex: "#EE5C42", r: 238, g: 92, b: 66, baseColor: "pink" },
+    { name: "tomato3", hex: "#CD4F39", r: 205, g: 79, b: 57, baseColor: "red" },
+    { name: "tomato4", hex: "#8B3626", r: 139, g: 54, b: 38, baseColor: "red" },
+    { name: "Dusty Rose", hex: "#856363", r: 133, g: 99, b: 99, baseColor: "pink" },
+    { name: "Firebrick", hex: "#8E2323", r: 142, g: 35, b: 35, baseColor: "red" },
+    { name: "Indian Red", hex: "#F5CCB0", r: 245, g: 204, b: 176, baseColor: "orange" },
+    { name: "Pink", hex: "#BC8F8F", r: 188, g: 143, b: 143, baseColor: "pink" },
+    { name: "Salmon", hex: "#6F4242", r: 111, g: 66, b: 66, baseColor: "red" },
+    { name: "Scarlet", hex: "#8C1717", r: 140, g: 23, b: 23, baseColor: "red" },
+    { name: "Spicy Pink", hex: "#FF1CAE", r: 255, g: 28, b: 174, baseColor: "pink" },
+    { name: "Free Speech Magenta", hex: "#E35BD8", r: 227, g: 91, b: 216, baseColor: "purple" },
+    { name: "Free Speech Red", hex: "#C00000", r: 192, g: 0, b: 0, baseColor: "red" },
+    { name: "DarkOrchid", hex: "#9932CC", r: 153, g: 50, b: 204, baseColor: "purple" },
+    { name: "DarkOrchid1", hex: "#BF3EFF", r: 191, g: 62, b: 255, baseColor: "purple" },
+    { name: "DarkOrchid2", hex: "#B23AEE", r: 178, g: 58, b: 238, baseColor: "purple" },
+    { name: "DarkOrchid3", hex: "#9A32CD", r: 154, g: 50, b: 205, baseColor: "purple" },
+    { name: "DarkOrchid4", hex: "#68228B", r: 104, g: 34, b: 139, baseColor: "purple" },
+    { name: "DarkViolet", hex: "#9400D3", r: 148, g: 0, b: 211, baseColor: "purple" },
+    { name: "LavenderBlush", hex: "#FFF0F5", r: 255, g: 240, b: 245, baseColor: "pink" },
+    { name: "LavenderBlush1", hex: "#FFF0F5", r: 255, g: 240, b: 245, baseColor: "pink" },
+    { name: "LavenderBlush2", hex: "#EEE0E5", r: 238, g: 224, b: 229, baseColor: "pink" },
+    { name: "LavenderBlush3", hex: "#CDC1C5", r: 205, g: 193, b: 197, baseColor: "pink" },
+    { name: "LavenderBlush4", hex: "#8B8386", r: 139, g: 131, b: 134, baseColor: "pink" },
+    { name: "MediumOrchid", hex: "#BA55D3", r: 186, g: 85, b: 211, baseColor: "purple" },
+    { name: "MediumOrchid1", hex: "#E066FF", r: 224, g: 102, b: 255, baseColor: "purple" },
+    { name: "MediumOrchid2", hex: "#D15FEE", r: 209, g: 95, b: 238, baseColor: "purple" },
+    { name: "MediumOrchid3", hex: "#B452CD", r: 180, g: 82, b: 205, baseColor: "purple" },
+    { name: "MediumOrchid4", hex: "#7A378B", r: 122, g: 55, b: 139, baseColor: "purple" },
+    { name: "MediumPurple", hex: "#9370DB", r: 147, g: 112, b: 219, baseColor: "purple" },
+    { name: "Medium Orchid", hex: "#9370DB", r: 147, g: 112, b: 219, baseColor: "purple" },
+    { name: "MediumPurple1", hex: "#AB82FF", r: 171, g: 130, b: 255, baseColor: "purple" },
+    { name: "Dark Orchid", hex: "#9932CD", r: 153, g: 50, b: 205, baseColor: "purple" },
+    { name: "MediumPurple2", hex: "#9F79EE", r: 159, g: 121, b: 238, baseColor: "purple" },
+    { name: "MediumPurple3", hex: "#8968CD", r: 137, g: 104, b: 205, baseColor: "purple" },
+    { name: "MediumPurple4", hex: "#5D478B", r: 93, g: 71, b: 139, baseColor: "purple" },
+    { name: "lavender", hex: "#E6E6FA", r: 230, g: 230, b: 250, baseColor: "purple" },
+    { name: "magenta", hex: "#FF00FF", r: 255, g: 0, b: 255, baseColor: "purple" },
+    { name: "fuchsia", hex: "#FF00FF", r: 255, g: 0, b: 255, baseColor: "purple" },
+    { name: "magenta1", hex: "#FF00FF", r: 255, g: 0, b: 255, baseColor: "purple" },
+    { name: "magenta2", hex: "#EE00EE", r: 238, g: 0, b: 238, baseColor: "purple" },
+    { name: "magenta3", hex: "#CD00CD", r: 205, g: 0, b: 205, baseColor: "purple" },
+    { name: "magenta4", hex: "#8B008B", r: 139, g: 0, b: 139, baseColor: "purple" },
+    { name: "maroon", hex: "#B03060", r: 176, g: 48, b: 96, baseColor: "pink" },
+    { name: "maroon1", hex: "#FF34B3", r: 255, g: 52, b: 179, baseColor: "pink" },
+    { name: "maroon2", hex: "#EE30A7", r: 238, g: 48, b: 167, baseColor: "pink" },
+    { name: "maroon3", hex: "#CD2990", r: 205, g: 41, b: 144, baseColor: "pink" },
+    { name: "maroon4", hex: "#8B1C62", r: 139, g: 28, b: 98, baseColor: "pink" },
+    { name: "orchid", hex: "#DA70D6", r: 218, g: 112, b: 214, baseColor: "purple" },
+    { name: "Orchid", hex: "#DB70DB", r: 219, g: 112, b: 219, baseColor: "purple" },
+    { name: "orchid1", hex: "#FF83FA", r: 255, g: 131, b: 250, baseColor: "purple" },
+    { name: "orchid2", hex: "#EE7AE9", r: 238, g: 122, b: 233, baseColor: "purple" },
+    { name: "orchid3", hex: "#CD69C9", r: 205, g: 105, b: 201, baseColor: "purple" },
+    { name: "orchid4", hex: "#8B4789", r: 139, g: 71, b: 137, baseColor: "purple" },
+    { name: "plum", hex: "#DDA0DD", r: 221, g: 160, b: 221, baseColor: "purple" },
+    { name: "plum1", hex: "#FFBBFF", r: 255, g: 187, b: 255, baseColor: "purple" },
+    { name: "plum2", hex: "#EEAEEE", r: 238, g: 174, b: 238, baseColor: "purple" },
+    { name: "plum3", hex: "#CD96CD", r: 205, g: 150, b: 205, baseColor: "purple" },
+    { name: "plum4", hex: "#8B668B", r: 139, g: 102, b: 139, baseColor: "purple" },
+    { name: "purple", hex: "#A020F0", r: 160, g: 32, b: 240, baseColor: "purple" },
+    { name: "purple", hex: "#800080", r: 128, g: 0, b: 128, baseColor: "purple" },
+    { name: "purple1", hex: "#9B30FF", r: 155, g: 48, b: 255, baseColor: "purple" },
+    { name: "purple2", hex: "#912CEE", r: 145, g: 44, b: 238, baseColor: "purple" },
+    { name: "purple3", hex: "#7D26CD", r: 125, g: 38, b: 205, baseColor: "purple" },
+    { name: "purple4", hex: "#551A8B", r: 85, g: 26, b: 139, baseColor: "purple" },
+    { name: "thistle", hex: "#D8BFD8", r: 216, g: 191, b: 216, baseColor: "purple" },
+    { name: "thistle1", hex: "#FFE1FF", r: 255, g: 225, b: 255, baseColor: "purple" },
+    { name: "thistle2", hex: "#EED2EE", r: 238, g: 210, b: 238, baseColor: "purple" },
+    { name: "thistle3", hex: "#CDB5CD", r: 205, g: 181, b: 205, baseColor: "purple" },
+    { name: "thistle4", hex: "#8B7B8B", r: 139, g: 123, b: 139, baseColor: "gray" },
+    { name: "violet", hex: "#EE82EE", r: 238, g: 130, b: 238, baseColor: "purple" },
+    { name: "violet blue", hex: "#9F5F9F", r: 159, g: 95, b: 159, baseColor: "purple" },
+    { name: "Dark Purple", hex: "#871F78", r: 135, g: 31, b: 120, baseColor: "purple" },
+    { name: "Maroon", hex: "#800000", r: 128, g: 0, b: 0, baseColor: "red" },
+    { name: "Medium Violet Red", hex: "#DB7093", r: 219, g: 112, b: 147, baseColor: "purple" },
+    { name: "Neon Pink", hex: "#FF6EC7", r: 255, g: 110, b: 199, baseColor: "pink" },
+    { name: "Plum", hex: "#EAADEA", r: 234, g: 173, b: 234, baseColor: "purple" },
+    { name: "Thistle", hex: "#D8BFD8", r: 216, g: 191, b: 216, baseColor: "purple" },
+    { name: "Turquoise", hex: "#ADEAEA", r: 173, g: 234, b: 234, baseColor: "teal" },
+    { name: "Violet", hex: "#4F2F4F", r: 79, g: 47, b: 79, baseColor: "purple" },
+    { name: "Violet Red", hex: "#CC3299", r: 204, g: 50, b: 153, baseColor: "purple" },
+    { name: "AntiqueWhite", hex: "#FAEBD7", r: 250, g: 235, b: 215, baseColor: "orange" },
+    { name: "AntiqueWhite1", hex: "#FFEFDB", r: 255, g: 239, b: 219, baseColor: "orange" },
+    { name: "AntiqueWhite2", hex: "#EEDFCC", r: 238, g: 223, b: 204, baseColor: "orange" },
+    { name: "AntiqueWhite3", hex: "#CDC0B0", r: 205, g: 192, b: 176, baseColor: "orange" },
+    { name: "AntiqueWhite4", hex: "#8B8378", r: 139, g: 131, b: 120, baseColor: "gray" },
+    { name: "FloralWhite", hex: "#FFFAF0", r: 255, g: 250, b: 240, baseColor: "orange" },
+    { name: "GhostWhite", hex: "#F8F8FF", r: 248, g: 248, b: 255, baseColor: "blue" },
+    { name: "NavajoWhite", hex: "#FFDEAD", r: 255, g: 222, b: 173, baseColor: "orange" },
+    { name: "NavajoWhite1", hex: "#FFDEAD", r: 255, g: 222, b: 173, baseColor: "orange" },
+    { name: "NavajoWhite2", hex: "#EECFA1", r: 238, g: 207, b: 161, baseColor: "orange" },
+    { name: "NavajoWhite3", hex: "#CDB38B", r: 205, g: 179, b: 139, baseColor: "orange" },
+    { name: "NavajoWhite4", hex: "#8B795E", r: 139, g: 121, b: 94, baseColor: "orange" },
+    { name: "OldLace", hex: "#FDF5E6", r: 253, g: 245, b: 230, baseColor: "orange" },
+    { name: "WhiteSmoke", hex: "#F5F5F5", r: 245, g: 245, b: 245, baseColor: "white" },
+    { name: "gainsboro", hex: "#DCDCDC", r: 220, g: 220, b: 220, baseColor: "gray" },
+    { name: "ivory", hex: "#FFFFF0", r: 255, g: 255, b: 240, baseColor: "yellow" },
+    { name: "ivory1", hex: "#FFFFF0", r: 255, g: 255, b: 240, baseColor: "yellow" },
+    { name: "ivory2", hex: "#EEEEE0", r: 238, g: 238, b: 224, baseColor: "yellow" },
+    { name: "ivory3", hex: "#CDCDC1", r: 205, g: 205, b: 193, baseColor: "gray" },
+    { name: "ivory4", hex: "#8B8B83", r: 139, g: 139, b: 131, baseColor: "gray" },
+    { name: "linen", hex: "#FAF0E6", r: 250, g: 240, b: 230, baseColor: "orange" },
+    { name: "seashell", hex: "#FFF5EE", r: 255, g: 245, b: 238, baseColor: "orange" },
+    { name: "seashell1", hex: "#FFF5EE", r: 255, g: 245, b: 238, baseColor: "orange" },
+    { name: "seashell2", hex: "#EEE5DE", r: 238, g: 229, b: 222, baseColor: "orange" },
+    { name: "seashell3", hex: "#CDC5BF", r: 205, g: 197, b: 191, baseColor: "orange" },
+    { name: "seashell4", hex: "#8B8682", r: 139, g: 134, b: 130, baseColor: "gray" },
+    { name: "snow", hex: "#FFFAFA", r: 255, g: 250, b: 250, baseColor: "pink" },
+    { name: "snow1", hex: "#FFFAFA", r: 255, g: 250, b: 250, baseColor: "pink" },
+    { name: "snow2", hex: "#EEE9E9", r: 238, g: 233, b: 233, baseColor: "pink" },
+    { name: "snow3", hex: "#CDC9C9", r: 205, g: 201, b: 201, baseColor: "gray" },
+    { name: "snow4", hex: "#8B8989", r: 139, g: 137, b: 137, baseColor: "gray" },
+    { name: "wheat", hex: "#F5DEB3", r: 245, g: 222, b: 179, baseColor: "orange" },
+    { name: "wheat1", hex: "#FFE7BA", r: 255, g: 231, b: 186, baseColor: "orange" },
+    { name: "wheat2", hex: "#EED8AE", r: 238, g: 216, b: 174, baseColor: "orange" },
+    { name: "wheat3", hex: "#CDBA96", r: 205, g: 186, b: 150, baseColor: "orange" },
+    { name: "wheat4", hex: "#8B7E66", r: 139, g: 126, b: 102, baseColor: "orange" },
+    { name: "white", hex: "#FFFFFF", r: 255, g: 255, b: 255, baseColor: "white" },
+    { name: "Quartz", hex: "#D9D9F3", r: 217, g: 217, b: 243, baseColor: "blue" },
+    { name: "Wheat", hex: "#D8D8BF", r: 216, g: 216, b: 191, baseColor: "yellow" },
+    { name: "BlanchedAlmond", hex: "#FFEBCD", r: 255, g: 235, b: 205, baseColor: "orange" },
+    { name: "DarkGoldenrod", hex: "#B8860B", r: 184, g: 134, b: 11, baseColor: "metallic" },
+    { name: "DarkGoldenrod1", hex: "#FFB90F", r: 255, g: 185, b: 15, baseColor: "metallic" },
+    { name: "DarkGoldenrod2", hex: "#EEAD0E", r: 238, g: 173, b: 14, baseColor: "metallic" },
+    { name: "DarkGoldenrod3", hex: "#CD950C", r: 205, g: 149, b: 12, baseColor: "metallic" },
+    { name: "DarkGoldenrod4", hex: "#8B6508", r: 139, g: 101, b: 8, baseColor: "metallic" },
+    { name: "LemonChiffon", hex: "#FFFACD", r: 255, g: 250, b: 205, baseColor: "yellow" },
+    { name: "LemonChiffon1", hex: "#FFFACD", r: 255, g: 250, b: 205, baseColor: "yellow" },
+    { name: "LemonChiffon2", hex: "#EEE9BF", r: 238, g: 233, b: 191, baseColor: "yellow" },
+    { name: "LemonChiffon3", hex: "#CDC9A5", r: 205, g: 201, b: 165, baseColor: "yellow" },
+    { name: "LemonChiffon4", hex: "#8B8970", r: 139, g: 137, b: 112, baseColor: "gray" },
+    { name: "LightGoldenrod", hex: "#EEDD82", r: 238, g: 221, b: 130, baseColor: "metallic" },
+    { name: "LightGoldenrod1", hex: "#FFEC8B", r: 255, g: 236, b: 139, baseColor: "metallic" },
+    { name: "LightGoldenrod2", hex: "#EEDC82", r: 238, g: 220, b: 130, baseColor: "metallic" },
+    { name: "LightGoldenrod3", hex: "#CDBE70", r: 205, g: 190, b: 112, baseColor: "metallic" },
+    { name: "LightGoldenrod4", hex: "#8B814C", r: 139, g: 129, b: 76, baseColor: "metallic" },
+    { name: "LightGoldenrodYellow", hex: "#FAFAD2", r: 250, g: 250, b: 210, baseColor: "metallic" },
+    { name: "LightYellow", hex: "#FFFFE0", r: 255, g: 255, b: 224, baseColor: "yellow" },
+    { name: "LightYellow1", hex: "#FFFFE0", r: 255, g: 255, b: 224, baseColor: "yellow" },
+    { name: "LightYellow2", hex: "#EEEED1", r: 238, g: 238, b: 209, baseColor: "yellow" },
+    { name: "LightYellow3", hex: "#CDCDB4", r: 205, g: 205, b: 180, baseColor: "yellow" },
+    { name: "LightYellow4", hex: "#8B8B7A", r: 139, g: 139, b: 122, baseColor: "gray" },
+    { name: "PaleGoldenrod", hex: "#EEE8AA", r: 238, g: 232, b: 170, baseColor: "metallic" },
+    { name: "PapayaWhip", hex: "#FFEFD5", r: 255, g: 239, b: 213, baseColor: "orange" },
+    { name: "cornsilk", hex: "#FFF8DC", r: 255, g: 248, b: 220, baseColor: "yellow" },
+    { name: "cornsilk1", hex: "#FFF8DC", r: 255, g: 248, b: 220, baseColor: "yellow" },
+    { name: "cornsilk2", hex: "#EEE8CD", r: 238, g: 232, b: 205, baseColor: "yellow" },
+    { name: "cornsilk3", hex: "#CDC8B1", r: 205, g: 200, b: 177, baseColor: "yellow" },
+    { name: "cornsilk4", hex: "#8B8878", r: 139, g: 136, b: 120, baseColor: "gray" },
+    { name: "goldenrod", hex: "#DAA520", r: 218, g: 165, b: 32, baseColor: "metallic" },
+    { name: "goldenrod1", hex: "#FFC125", r: 255, g: 193, b: 37, baseColor: "metallic" },
+    { name: "goldenrod2", hex: "#EEB422", r: 238, g: 180, b: 34, baseColor: "metallic" },
+    { name: "goldenrod3", hex: "#CD9B1D", r: 205, g: 155, b: 29, baseColor: "metallic" },
+    { name: "goldenrod4", hex: "#8B6914", r: 139, g: 105, b: 20, baseColor: "metallic" },
+    { name: "moccasin", hex: "#FFE4B5", r: 255, g: 228, b: 181, baseColor: "orange" },
+    { name: "yellow", hex: "#FFFF00", r: 255, g: 255, b: 0, baseColor: "yellow" },
+    { name: "yellow1", hex: "#FFFF00", r: 255, g: 255, b: 0, baseColor: "yellow" },
+    { name: "yellow2", hex: "#EEEE00", r: 238, g: 238, b: 0, baseColor: "yellow" },
+    { name: "yellow3", hex: "#CDCD00", r: 205, g: 205, b: 0, baseColor: "yellow" },
+    { name: "yellow4", hex: "#8B8B00", r: 139, g: 139, b: 0, baseColor: "green" },
+    { name: "gold", hex: "#FFD700", r: 255, g: 215, b: 0, baseColor: "metallic" },
+    { name: "gold1", hex: "#FFD700", r: 255, g: 215, b: 0, baseColor: "metallic" },
+    { name: "gold2", hex: "#EEC900", r: 238, g: 201, b: 0, baseColor: "metallic" },
+    { name: "gold3", hex: "#CDAD00", r: 205, g: 173, b: 0, baseColor: "metallic" },
+    { name: "gold4", hex: "#8B7500", r: 139, g: 117, b: 0, baseColor: "metallic" },
+    { name: "Goldenrod", hex: "#DBDB70", r: 219, g: 219, b: 112, baseColor: "metallic" },
+    { name: "Medium Goldenrod", hex: "#EAEAAE", r: 234, g: 234, b: 174, baseColor: "metallic" },
+    { name: "Yellow Green", hex: "#99CC32", r: 153, g: 204, b: 50, baseColor: "green" },
+    { name: "copper", hex: "#B87333", r: 184, g: 115, b: 51, baseColor: "metallic" },
+    { name: "cool copper", hex: "#D98719", r: 217, g: 135, b: 25, baseColor: "metallic" },
+    { name: "Green Copper", hex: "#856363", r: 133, g: 99, b: 99, baseColor: "metallic" },
+    { name: "brass", hex: "#B5A642", r: 181, g: 166, b: 66, baseColor: "yellow" },
+    { name: "bronze", hex: "#8C7853", r: 140, g: 120, b: 83, baseColor: "metallic" },
+    { name: "bronze II", hex: "#A67D3D", r: 166, g: 125, b: 61, baseColor: "metallic" },
+    { name: "bright gold", hex: "#D9D919", r: 217, g: 217, b: 25, baseColor: "metallic" },
+    { name: "Old Gold", hex: "#CFB53B", r: 207, g: 181, b: 59, baseColor: "metallic" },
+    { name: "CSS Gold", hex: "#CC9900", r: 204, g: 153, b: 0, baseColor: "metallic" },
+    { name: "gold", hex: "#CD7F32", r: 205, g: 127, b: 50, baseColor: "metallic" },
+    { name: "silver", hex: "#E6E8FA", r: 230, g: 232, b: 250, baseColor: "blue" },
+    { name: "Silver", hex: "#C0C0C0", r: 192, g: 192, b: 192, baseColor: "gray" },
+    { name: "Light Steel Blue", hex: "#545454", r: 84, g: 84, b: 84, baseColor: "gray" },
+    { name: "Steel Blue", hex: "#236B8E", r: 35, g: 107, b: 142, baseColor: "blue" }
+];
+
+// Precompute Lab values for color shades
+COLOR_SHADES.forEach(c => {
+    c.lab = rgbToLab(c.r, c.g, c.b);
+});
+
 function getClosestColor(r, g, b) {
-    const hsl = rgbToHsl(r, g, b);
-    const h = hsl.h;
-    const s = hsl.s;
-    const l = hsl.l;
+    const maxVal = Math.max(r, g, b);
+    const minVal = Math.min(r, g, b);
+    const chroma = maxVal - minVal;
 
-    console.log(`HSL computed: Hue=${h}°, Saturation=${s}%, Lightness=${l}% (RGB: ${r}, ${g}, ${b})`);
-
-    // 1. NEUTRALS & GREYS (Black, White, Off-Whites, Greys)
-    if (l < 15) {
-        return { name: "Black", hex: "#111111" };
-    }
-    if (l < 25 && s < 18) {
-        return { name: "Black", hex: "#111111" };
-    }
-    if (l > 94 && s < 6) {
-        return { name: "White", hex: "#ffffff" };
-    }
-    if (l > 90 && h >= 35 && h < 60 && s >= 6 && s < 15) {
-        return { name: "Ivory", hex: "#fffff0" };
-    }
-    if (l > 88 && s < 10) {
-        return { name: "Off-White", hex: "#faf9f6" };
-    }
-    if (s < 12) {
-        if (l < 32) return { name: "Charcoal", hex: "#2f3e46" };
-        if (l > 65 && l <= 88) {
-            if (s < 8) return { name: "Silver", hex: "#c0c0c0" };
-            return { name: "Light Grey", hex: "#d3d3d3" };
-        }
-        return { name: "Grey", hex: "#808080" };
+    // Boost dark, saturated pixels to bring out their hue (using threshold 15)
+    if (chroma >= 15 && maxVal < 100) {
+        const scale = 150 / maxVal;
+        r = Math.min(255, Math.round(r * scale));
+        g = Math.min(255, Math.round(g * scale));
+        b = Math.min(255, Math.round(b * scale));
     }
 
-    // 2. CREAMS, CHAMPAGNES, BEIGES, KHAKIS & CAMELS (Warm Neutrals)
-    if (h >= 25 && h < 60) {
-        if (l >= 82 && s < 25) return { name: "Cream", hex: "#fffdd0" };
-        if (l >= 75 && l < 82 && s >= 15 && s < 30) return { name: "Champagne", hex: "#f7e7ce" };
-        if (l >= 60 && l < 82 && s < 32) return { name: "Beige", hex: "#f5f5dc" };
-        if (l >= 38 && l < 60 && s < 30) return { name: "Khaki", hex: "#c3b091" };
-        if (l >= 45 && l < 60 && s >= 28 && s < 50) return { name: "Camel", hex: "#c19a6b" };
-    }
+    const inputLab = rgbToLab(r, g, b);
+    let minDistance = Infinity;
+    let closestColor = null;
 
-    // 3. SPECIALIZED LIGHT APPAREL SHADES (Denims, Sages, Lavenders, Lilacs, Mints)
-    // washed blue denim
-    if (h >= 180 && h < 245 && s >= 10 && s < 35 && l >= 50 && l < 80) {
-        return { name: "Light Blue", hex: "#add8e6" };
-    }
-    // lavender
-    if (h >= 245 && h < 310 && s >= 10 && s < 45 && l >= 68) {
-        return { name: "Lavender", hex: "#e6e6fa" };
-    }
-    // lilac
-    if (h >= 265 && h < 295 && s >= 20 && s < 45 && l >= 62 && l < 78) {
-        return { name: "Lilac", hex: "#c8a2c8" };
-    }
-    // sage green
-    if (h >= 80 && h < 160 && l >= 55 && l < 75 && s >= 10 && s < 32) {
-        return { name: "Sage Green", hex: "#87a96b" };
-    }
-    // mint green
-    if (h >= 120 && h < 165 && l >= 72 && s >= 15 && s < 50) {
-        return { name: "Mint Green", hex: "#aaf0d1" };
-    }
-    // aqua / seafoam
-    if (h >= 150 && h < 200 && l >= 65 && s >= 20 && s < 50) {
-        return { name: "Aqua", hex: "#7fffd4" };
-    }
-
-    // 4. PEACH, SALMON, ROSE GOLD, DUSTY ROSE & MAUVES
-    if (h >= 330 || h < 25) {
-        if (l >= 72 && s >= 15 && s < 45) {
-            if (h >= 12 && h < 30) return { name: "Peach", hex: "#ffdab9" };
-            return { name: "Blush Pink", hex: "#ffb7c5" };
-        }
-        if (h >= 6 && h < 22 && l >= 60 && l < 72 && s >= 35) {
-            return { name: "Salmon", hex: "#fa8072" };
-        }
-        if (l >= 60 && l < 75 && s >= 20 && s < 40) {
-            return { name: "Rose Gold", hex: "#b76e79" };
-        }
-        if (l >= 48 && l < 68 && s >= 12 && s < 35) {
-            return { name: "Dusty Rose", hex: "#cca9a1" };
+    for (let i = 0; i < COLOR_SHADES.length; i++) {
+        const p = COLOR_SHADES[i];
+        const distSq = (inputLab.L - p.lab.L) * (inputLab.L - p.lab.L) +
+                       (inputLab.a - p.lab.a) * (inputLab.a - p.lab.a) +
+                       (inputLab.b - p.lab.b) * (inputLab.b - p.lab.b);
+        if (distSq < minDistance) {
+            minDistance = distSq;
+            closestColor = p;
         }
     }
-    if (h >= 270 && h < 320 && s >= 15 && s < 35 && l >= 45 && l < 70) {
-        return { name: "Mauve", hex: "#e0b0ff" };
-    }
 
-    // 5. DETAILED HUE RANGES (Main Colors & Shades)
-
-    // A. REDS & PINK & BURGUNDY & MAROON
-    if (h >= 340 || h < 12) {
-        if (l >= 15 && l < 32) {
-            if (s >= 30) return { name: "Burgundy", hex: "#800020" };
-            return { name: "Maroon", hex: "#800000" };
-        }
-        if (l >= 28 && l < 48 && s >= 50) return { name: "Crimson", hex: "#dc143c" };
-        if (l >= 60) return { name: "Pink", hex: "#ffc0cb" };
-        return { name: "Red", hex: "#e74c3c" };
-    }
-
-    // B. ORANGES & RUST & BROWNS & APRICOT
-    if (h >= 12 && h < 35) {
-        if (l < 20 && s >= 20) return { name: "Chocolate Brown", hex: "#3d2314" };
-        if (l < 32) return { name: "Brown", hex: "#5c4033" };
-        if (l >= 25 && l < 45 && s >= 35) return { name: "Rust", hex: "#b22222" };
-        if (h >= 12 && h < 25 && l >= 30 && l < 50 && s >= 30 && s < 60) return { name: "Terracotta", hex: "#e2725b" };
-        if (h >= 20 && h < 35 && l >= 65 && l < 78 && s >= 30 && s < 55) return { name: "Apricot", hex: "#fbceb1" };
-        if (l >= 32 && l < 60 && s < 45) return { name: "Tan", hex: "#d2b48c" };
-        return { name: "Orange", hex: "#f39c12" };
-    }
-
-    // C. YELLOWS & MUSTARDS & GOLD
-    if (h >= 35 && h < 62) {
-        if (l < 32) return { name: "Olive", hex: "#556b2f" };
-        if (h >= 38 && h < 54 && l >= 45 && l < 65 && s >= 45 && s < 75) return { name: "Gold", hex: "#ffd700" };
-        if (l < 60 && s >= 35) return { name: "Mustard", hex: "#e1ad01" };
-        if (h >= 48 && h < 62 && l >= 60 && s >= 60) return { name: "Lemon Yellow", hex: "#fff700" };
-        return { name: "Yellow", hex: "#fcbf49" };
-    }
-
-    // D. GREENS & OLIVES & EMERALD
-    if (h >= 62 && h < 160) {
-        if (h >= 62 && h < 90 && l < 40) return { name: "Olive Green", hex: "#556b2f" };
-        if (h >= 60 && h < 90 && l >= 30 && l < 50 && s >= 10 && s < 25) return { name: "Khaki Green", hex: "#708238" };
-        if (l < 35) return { name: "Forest Green", hex: "#1b4d3e" };
-        if (h >= 110 && h < 155 && l >= 25 && l < 55 && s >= 45) return { name: "Emerald Green", hex: "#50c878" };
-        if (h >= 62 && h < 90 && s >= 45) return { name: "Lime Green", hex: "#32cd32" };
-        return { name: "Green", hex: "#2ecc71" };
-    }
-
-    // E. TEALS & TURQUOISE
-    if (h >= 160 && h < 195) {
-        if (l < 42) return { name: "Teal", hex: "#008080" };
-        return { name: "Turquoise", hex: "#40e0d0" };
-    }
-
-    // F. BLUES & NAVIES & ROYAL BLUE
-    if (h >= 195 && h < 245) {
-        if (l < 26 && s >= 20) return { name: "Navy Blue", hex: "#0b1d3a" };
-        if (h >= 200 && h < 240 && s >= 55 && l >= 30 && l < 60) return { name: "Royal Blue", hex: "#4169e1" };
-        if (l >= 25 && l < 48 && s >= 15 && s < 40) return { name: "Indigo", hex: "#2f4858" };
-        if (l >= 65 && s >= 30) return { name: "Sky Blue", hex: "#87ceeb" };
-        return { name: "Blue", hex: "#2563eb" };
-    }
-
-    // G. PURPLES & PLUMS
-    if (h >= 245 && h < 300) {
-        if (l < 35) return { name: "Plum", hex: "#4d0f28" };
-        return { name: "Purple", hex: "#8b5cf6" };
-    }
-
-    // H. MAGENTAS & FUCHSIAS
-    if (h >= 300 && h < 340) {
-        if (s >= 55 && l >= 35 && l < 60) return { name: "Fuchsia", hex: "#ff007f" };
-        if (s >= 40 && l >= 25 && l < 55) return { name: "Magenta", hex: "#ff00ff" };
-        if (l >= 60) return { name: "Pink", hex: "#ffc0cb" };
-        return { name: "Fuchsia", hex: "#ff007f" };
-    }
-
-    // Fallback if none matches (safe guard)
-    return { name: "Grey", hex: "#808080" };
+    return closestColor ? { name: closestColor.name, hex: closestColor.hex, baseColor: closestColor.baseColor } : { name: "Unknown", hex: "#cccccc", baseColor: "gray" };
 }
 
 function extractColorFromImage(imgEl) {
@@ -2173,7 +2728,7 @@ function extractColorFromImage(imgEl) {
         if (a > 100) {
             const colorObj = getClosestColor(r, g, b);
             if (colorObj && colorObj.name !== "Unknown") {
-                colorCounts[colorObj.name] = colorCounts[colorObj.name] || { count: 0, hex: colorObj.hex };
+                colorCounts[colorObj.name] = colorCounts[colorObj.name] || { count: 0, hex: colorObj.hex, baseColor: colorObj.baseColor };
                 colorCounts[colorObj.name].count++;
                 totalCount++;
             }
@@ -2187,13 +2742,11 @@ function extractColorFromImage(imgEl) {
         };
     }
     
-    function getColorPriority(name) {
-        const neutralBackgrounds = ["White", "Off-White", "Light Grey", "Grey"];
-        if (neutralBackgrounds.includes(name)) {
+    function getColorPriority(name, baseColor) {
+        if (baseColor === "white" || baseColor === "gray") {
             return 1; // lowest priority (usually mannequin background)
         }
-        const premiumColors = ["Black", "Burgundy", "Navy Blue", "Royal Blue", "Blue", "Red", "Pink", "Purple", "Emerald", "Teal", "Forest Green", "Plum", "Fuchsia", "Rust"];
-        if (premiumColors.includes(name)) {
+        if (["black", "red", "pink", "blue", "purple", "teal", "green"].includes(baseColor)) {
             return 3; // highest priority (most attractive catalog colors)
         }
         return 2; // medium priority (Beige, Brown, Khaki, Orange, Yellow, etc.)
@@ -2202,11 +2755,12 @@ function extractColorFromImage(imgEl) {
     // Convert counts to sorted array and sort by weighted score
     const sortedColors = Object.keys(colorCounts).map(name => {
         const percentage = (colorCounts[name].count / totalCount) * 100;
-        const priority = getColorPriority(name);
+        const priority = getColorPriority(name, colorCounts[name].baseColor);
         const score = percentage + (priority - 2) * 25;
         return {
             name: name,
             hex: colorCounts[name].hex,
+            baseColor: colorCounts[name].baseColor,
             count: colorCounts[name].count,
             percentage: percentage,
             score: score
@@ -2366,7 +2920,8 @@ window.handleAiFabricUpload = async function(input) {
         window.aiAnalysisData = {
             primary: { name: primaryColor.name, hex: primaryColor.hex },
             secondary: secondaryColor ? { name: secondaryColor.name, hex: secondaryColor.hex } : null,
-            apparelType: detectedItem
+            apparelType: detectedItem,
+            file: file // Store the analyzed file object
         };
 
         // Update Modal inputs
@@ -2435,12 +2990,13 @@ window.copyAiDetailsToDescription = function() {
         descField.value += textToAdd;
         
         let addedVariants = [];
+        const localFiles = window.aiAnalysisData && window.aiAnalysisData.file ? [window.aiAnalysisData.file] : null;
         if (usePrimary && primaryName) {
-            window.addVariantBlock({ name: primaryName, hex: primaryHex });
+            window.addVariantBlock({ name: primaryName, hex: primaryHex, localFiles: localFiles });
             addedVariants.push(primaryName);
         }
         if (useSecondary && secondaryName) {
-            window.addVariantBlock({ name: secondaryName, hex: secondaryHex });
+            window.addVariantBlock({ name: secondaryName, hex: secondaryHex, localFiles: localFiles });
             addedVariants.push(secondaryName);
         }
         
@@ -3519,7 +4075,7 @@ function initRoyalChatbot() {
 
             // 4. POLICIES
             if (q.includes('shipping') || q.includes('delivery')) {
-                addMessage("🚚 <strong>Shipping Policy</strong>:<br>- <strong>Complimentary standard shipping</strong> on all orders over ₹10,000.<br>- Standard delivery charge: ₹100 for orders under ₹10,000.<br>- Deliveries take 3 to 7 business days across regions.");
+                addMessage("🚚 <strong>Shipping Policy</strong>:<br>- <strong>Complimentary standard shipping</strong> on all orders over ₹10,000.<br>- Standard delivery charge: ₹50 for orders under ₹10,000.<br>- Deliveries take 3 to 7 business days across regions.");
                 return;
             }
             if (q.includes('return') || q.includes('replace') || q.includes('exchange')) {
